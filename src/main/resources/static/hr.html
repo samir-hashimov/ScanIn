@@ -1,10 +1,763 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="az">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanIn — HR İdarəetmə Paneli</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1e293b, #0f172a 70%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+
+        /* YENİ PREMİUM LOGİN EKRANI DİZAYNI */
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(16px);
+            padding: 40px 34px;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            text-align: center;
+        }
+
+        .login-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.35);
+        }
+
+        .login-card h2 {
+            color: #f8fafc;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .login-subtitle {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        /* XƏTA BİLDİRİŞİ QUTUSU */
+        .error-alert {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: shake 0.35s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-6px);
+            }
+            75% {
+                transform: translateX(6px);
+            }
+        }
+
+        .input-box {
+            text-align: left;
+            margin-bottom: 18px;
+            position: relative;
+        }
+
+        .input-box label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+
+        .input-box input {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            background: rgba(15, 23, 42, 0.8);
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .input-box input:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .toggle-pass {
+            position: absolute;
+            right: 14px;
+            top: 38px;
+            cursor: pointer;
+            color: #64748b;
+            font-size: 16px;
+            user-select: none;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.25s;
+            margin-top: 6px;
+            box-shadow: 0 8px 20px rgba(56, 189, 248, 0.25);
+        }
+
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(56, 189, 248, 0.4);
+            color: #fff;
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* DASHBOARD STİLLƏRİ */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #334155;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header h1 {
+            color: #38bdf8;
+            font-size: 24px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .btn-blue {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        .btn-green {
+            background: #22c55e;
+            color: #0f172a;
+        }
+
+        .btn-amber {
+            background: #f59e0b;
+            color: #0f172a;
+        }
+
+        .btn-red {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 18px;
+            border-radius: 12px;
+        }
+
+        .stat-card h4 {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .val {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .panel {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .panel h3 {
+            margin-bottom: 16px;
+            color: #e2e8f0;
+            font-size: 18px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            background: #0f172a;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .bg-green {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .bg-yellow {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        .bg-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .bg-blue {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-$END$
+
+<!-- YENİ DİZAYNLI HR LOGİN BÖLMƏSİ -->
+<div id="hrLoginBox" class="login-wrapper">
+    <div class="login-card">
+        <div class="login-icon">🛡️</div>
+        <h2>ScanIn HR Panel</h2>
+        <p class="login-subtitle">İdarəetmə panelinə daxil olmaq üçün məlumatlarınızı yazın</p>
+
+        <!-- Xəta Bildirişi Qutusu (Səhv şifrə və ya ad yazanda çıxır) -->
+        <div id="loginErrorBox" class="error-alert hidden">
+            <span>⚠️</span>
+            <span id="loginErrorText">İstifadəçi adı və ya şifrə yanlışdır!</span>
+        </div>
+
+        <div class="input-box">
+            <label>İstifadəçi Adı</label>
+            <input type="text" id="hrUser" placeholder="İstifadəçi adınızı daxil edin" autocomplete="username"
+                   onkeydown="if(event.key==='Enter') hrLogin()">
+        </div>
+
+        <div class="input-box">
+            <label>Şifrə</label>
+            <input type="password" id="hrPass" placeholder="••••••••" autocomplete="current-password"
+                   onkeydown="if(event.key==='Enter') hrLogin()">
+            <span class="toggle-pass" onclick="togglePassword()" title="Şifrəni göstər/gizlət">👁️</span>
+        </div>
+
+        <button id="loginBtn" class="btn-login" onclick="hrLogin()">Sistemə Daxil Ol</button>
+    </div>
+</div>
+
+<!-- ƏSAS HR DASHBOARD -->
+<div id="hrDashboard" class="container hidden">
+    <div class="header">
+        <h1>📊 ScanIn — HR & Admin İdarəetmə Paneli</h1>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-green" onclick="toggleQrModal()">🖨️ Qapı QR Kodunu Göstər</button>
+            <button class="btn btn-amber" onclick="triggerAutoClose()">🕚 Unudanları Bağla (23:59 Test)</button>
+            <button class="btn btn-red" onclick="hrLogout()">Çıxış</button>
+        </div>
+    </div>
+
+    <!-- QR Kod Modal Qutusu -->
+    <div id="qrModal" class="panel hidden" style="text-align:center;">
+        <h3>🚪 Qapıya Yapışdırılacaq QR Kod</h3>
+        <p style="color:#94a3b8; font-size:14px; margin-bottom:15px;">İşçilər telefon kamerası ilə bu kodu oxutduqda
+            birbaşa giriş/çıxış səhifəsi açılır:</p>
+        <img id="qrImage" src="" alt="QR Code"
+             style="border: 8px solid #fff; border-radius: 12px; width: 220px; height: 220px;">
+        <p id="qrUrlText" style="margin-top:10px; color:#38bdf8; font-weight:bold;"></p>
+    </div>
+
+    <!-- Günün Statistik Kartları -->
+    <div class="grid-cards">
+        <div class="stat-card">
+            <h4>🥇 Ofisə İlk Gələn</h4>
+            <div class="val" id="statFirstArrive">—</div>
+        </div>
+        <div class="stat-card">
+            <h4>🚪 Ofisdən İlk Çıxan</h4>
+            <div class="val" id="statFirstLeave">—</div>
+        </div>
+        <div class="stat-card">
+            <h4>🌙 Ofisi Son Tərk Edən (Qəhrəman)</h4>
+            <div class="val" id="statLastLeave">—</div>
+        </div>
+        <div class="stat-card">
+            <h4>👥 Bu Gün İşə Gələnlər</h4>
+            <div class="val" id="statTotalPresent">0 nəfər</div>
+        </div>
+    </div>
+
+    <!-- 1. Yeni İşçi Əlavə Etmək -->
+    <div class="panel">
+        <h3>➕ Yeni İşçi Kartı Yarat (EMP Kodu Avtomatik Verilir)</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label>İşçinin Adı və Soyadı</label>
+                <input type="text" id="newFullName" placeholder="Məs: Nuray Əliyeva">
+            </div>
+            <div class="form-group">
+                <label>Vəzifəsi (Gördüyü İş)</label>
+                <input type="text" id="newPosition" placeholder="Məs: Mühasib">
+            </div>
+            <div class="form-group">
+                <label>Rolu</label>
+                <select id="newRole">
+                    <option value="EMPLOYEE">EMPLOYEE (İşçi)</option>
+                    <option value="HR">HR</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>İş Başlama Saatı</label>
+                <input type="time" id="newShiftStart" value="09:00">
+            </div>
+            <div class="form-group">
+                <label>İş Bitmə Saatı</label>
+                <input type="time" id="newShiftEnd" value="18:00">
+            </div>
+            <button class="btn btn-blue" onclick="createEmployee()">İşçi Yarat</button>
+        </div>
+        <div id="createdEmpAlert" class="hidden"
+             style="margin-top:14px; padding:12px; background:rgba(34,197,94,0.15); border:1px solid #22c55e; border-radius:8px; color:#bbf7d0;"></div>
+    </div>
+
+    <!-- 2. Günlük Giriş-Çıxış Hesabatı Cədvəli -->
+    <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <h3>📅 Günlük Giriş-Çıxış və İş Saatları Jurnalı</h3>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="date" id="reportDate"
+                       style="width:160px; padding:8px; border-radius:8px; background:#0f172a; color:#fff; border:1px solid #475569;"
+                       onchange="loadDailyReport()">
+                <button class="btn btn-blue" onclick="loadDailyReport()">🔄 Yenilə</button>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                <tr>
+                    <th>Kod</th>
+                    <th>Ad Soyad & Vəzifə</th>
+                    <th>Giriş Saatı</th>
+                    <th>Giriş Statusu</th>
+                    <th>Çıxış Saatı</th>
+                    <th>Çıxış Statusu</th>
+                    <th>Gecikmə / Əlavə İş</th>
+                    <th>Ümumi İşlədiyi</th>
+                    <th>Qeyd / Səbəb</th>
+                </tr>
+                </thead>
+                <tbody id="reportTableBody">
+                <tr>
+                    <td colspan="9" style="text-align:center; color:#94a3b8;">Məlumat yüklənir...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. Bütün İşçilərin Siyahısı -->
+    <div class="panel">
+        <h3>👥 Qeydiyyatda Olan Bütün İşçilər (EMP Kodları)</h3>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                <tr>
+                    <th>İşçi Kodu</th>
+                    <th>Ad və Soyad</th>
+                    <th>Vəzifə</th>
+                    <th>Username (Aktivlik)</th>
+                    <th>İş Qrafiki</th>
+                    <th>Rol</th>
+                </tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const HR_TOKEN_KEY = 'scanin_hr_token';
+
+    window.onload = () => {
+        document.getElementById('reportDate').valueAsDate = new Date();
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        if (token) {
+            showDashboard();
+        }
+    };
+
+    function togglePassword() {
+        const passInput = document.getElementById('hrPass');
+        passInput.type = passInput.type === 'password' ? 'text' : 'password';
+    }
+
+    function showLoginError(msg) {
+        const errBox = document.getElementById('loginErrorBox');
+        const errText = document.getElementById('loginErrorText');
+        errText.innerText = msg;
+        errBox.classList.remove('hidden');
+        // Titrəmə animasiyasını yenidən işə salmaq üçün:
+        errBox.style.animation = 'none';
+        errBox.offsetHeight;
+        errBox.style.animation = null;
+    }
+
+    async function hrLogin() {
+        const username = document.getElementById('hrUser').value.trim();
+        const password = document.getElementById('hrPass').value;
+        const btn = document.getElementById('loginBtn');
+
+        document.getElementById('loginErrorBox').classList.add('hidden');
+
+        if (!username || !password) {
+            showLoginError('Zəhmət olmasa istifadəçi adı və şifrəni daxil edin!');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'Yoxlanılır...';
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password})
+            });
+
+            // Cavab boş ola bilər deyə əvvəlcə text kimi oxuyuruq (JS çökməsin!):
+            const rawText = await res.text();
+            let data = {};
+            try {
+                data = rawText ? JSON.parse(rawText) : {};
+            } catch (e) {
+                data = {};
+            }
+
+            if (!res.ok) {
+                showLoginError(data.message || 'İstifadəçi adı və ya şifrə yanlışdır!');
+                btn.disabled = false;
+                btn.innerText = 'Sistemə Daxil Ol';
+                return;
+            }
+
+            if (data.role !== 'HR' && data.role !== 'ADMIN') {
+                showLoginError('Sizin HR panelinə giriş səlahiyyətiniz yoxdur!');
+                btn.disabled = false;
+                btn.innerText = 'Sistemə Daxil Ol';
+                return;
+            }
+
+            localStorage.setItem(HR_TOKEN_KEY, data.token);
+            showDashboard();
+
+        } catch (err) {
+            showLoginError('Serverlə əlaqə xətası baş verdi!');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Sistemə Daxil Ol';
+        }
+    }
+
+    function showDashboard() {
+        document.getElementById('hrLoginBox').classList.add('hidden');
+        document.getElementById('hrDashboard').classList.remove('hidden');
+
+        const scanUrl = window.location.origin + '/index.html';
+        document.getElementById('qrUrlText').innerText = scanUrl;
+        document.getElementById('qrImage').src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(scanUrl);
+
+        loadDailyReport();
+        loadAllUsers();
+    }
+
+    function toggleQrModal() {
+        document.getElementById('qrModal').classList.toggle('hidden');
+    }
+
+    async function createEmployee() {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        const payload = {
+            fullName: document.getElementById('newFullName').value.trim(),
+            position: document.getElementById('newPosition').value.trim(),
+            role: document.getElementById('newRole').value,
+            shiftStartTime: document.getElementById('newShiftStart').value + ':00',
+            shiftEndTime: document.getElementById('newShiftEnd').value + ':00'
+        };
+
+        const res = await fetch('/api/hr/users', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            let errMsg = data.message || 'Xəta baş verdi!';
+            if (data.details) errMsg += '\n' + Object.values(data.details).join('\n');
+            alert(errMsg);
+            return;
+        }
+
+        const alertBox = document.getElementById('createdEmpAlert');
+        alertBox.classList.remove('hidden');
+        alertBox.innerHTML = `✅ <b>${data.fullName}</b> (${data.position}) sistemə əlavə olundu! <br>🔑 İşçiyə veriləcək aktivləşdirmə kodu: <b style="font-size:18px; color:#38bdf8;">${data.employeeCode}</b>`;
+
+        document.getElementById('newFullName').value = '';
+        document.getElementById('newPosition').value = '';
+        loadAllUsers();
+    }
+
+    async function loadDailyReport() {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        const dateVal = document.getElementById('reportDate').value;
+
+        const res = await fetch(`/api/hr/reports/daily?date=${dateVal}`, {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        if (res.status === 401 || res.status === 403) {
+            hrLogout();
+            return;
+        }
+
+        const list = await res.json();
+        const tbody = document.getElementById('reportTableBody');
+        tbody.innerHTML = '';
+
+        document.getElementById('statTotalPresent').innerText = list.length + ' nəfər';
+        document.getElementById('statFirstArrive').innerText = '—';
+        document.getElementById('statFirstLeave').innerText = '—';
+        document.getElementById('statLastLeave').innerText = '—';
+
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#94a3b8;">Bu tarixdə hələ heç kim giriş etməyib.</td></tr>';
+            return;
+        }
+
+        let earliestCheckout = null;
+
+        list.forEach(item => {
+            const inTime = item.checkInTime ? item.checkInTime.substring(11, 16) : '—';
+            const outTime = item.checkOutTime ? item.checkOutTime.substring(11, 16) : '🏢 Ofisdədir';
+
+            if (item.firstToArrive) {
+                document.getElementById('statFirstArrive').innerText = `${item.fullName} (${inTime})`;
+            }
+            if (item.lastToLeave) {
+                document.getElementById('statLastLeave').innerText = `${item.fullName} (${outTime})`;
+            }
+            if (item.checkOutTime && item.departureStatus !== 'FORGOT_CHECKOUT') {
+                if (!earliestCheckout || item.checkOutTime < earliestCheckout.checkOutTime) {
+                    earliestCheckout = item;
+                }
+            }
+
+            const hrs = Math.floor(item.totalWorkedMinutes / 60);
+            const mins = item.totalWorkedMinutes % 60;
+
+            const notes = [item.lateReason ? `Gecikmə: ${item.lateReason}` : '',
+                item.earlyLeaveReason ? `Tez çıxış: ${item.earlyLeaveReason}` : '',
+                item.systemNote || ''].filter(Boolean).join(' | ');
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><b>${item.employeeCode}</b></td>
+                    <td><b>${item.fullName}</b> ${item.firstToArrive ? '🥇' : ''} ${item.lastToLeave ? '🌙' : ''}<br><span style="color:#94a3b8; font-size:12px;">${item.position}</span></td>
+                    <td>${inTime}</td>
+                    <td><span class="badge ${getArrivalBadge(item.arrivalStatus)}">${item.arrivalStatus}</span></td>
+                    <td>${outTime}</td>
+                    <td><span class="badge ${getDepartureBadge(item.departureStatus)}">${item.departureStatus}</span></td>
+                    <td><span style="color:#f87171;">-${item.lateMinutes} dəq</span> / <span style="color:#4ade80;">+${item.overtimeMinutes} dəq</span></td>
+                    <td><b>${hrs} saat ${mins} dəq</b></td>
+                    <td style="max-width:260px; color:#cbd5e1;">${notes || '—'}</td>
+                </tr>
+            `;
+        });
+
+        if (earliestCheckout) {
+            document.getElementById('statFirstLeave').innerText = `${earliestCheckout.fullName} (${earliestCheckout.checkOutTime.substring(11, 16)})`;
+        }
+    }
+
+    async function loadAllUsers() {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        const res = await fetch('/api/hr/users', {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        const users = await res.json();
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+
+        users.forEach(u => {
+            const statusHtml = u.username
+                ? `<span class="badge bg-green">✅ Aktiv (${u.username})</span>`
+                : `<span class="badge bg-yellow">⏳ Gözləyir (Hələ aktivləşdirməyib)</span>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><b style="color:#38bdf8;">${u.employeeCode}</b></td>
+                    <td>${u.fullName}</td>
+                    <td>${u.position}</td>
+                    <td>${statusHtml}</td>
+                    <td>${u.shiftStartTime.substring(0, 5)} - ${u.shiftEndTime.substring(0, 5)}</td>
+                    <td><span class="badge bg-blue">${u.role}</span></td>
+                </tr>
+            `;
+        });
+    }
+
+    async function triggerAutoClose() {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        const res = await fetch('/api/hr/scheduler/trigger-auto-close', {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadDailyReport();
+    }
+
+    function getArrivalBadge(st) {
+        if (st === 'ON_TIME') return 'bg-green';
+        if (st === 'LATE') return 'bg-yellow';
+        return 'bg-red';
+    }
+
+    function getDepartureBadge(st) {
+        if (st === 'COMPLETED') return 'bg-green';
+        if (st === 'WORKING') return 'bg-blue';
+        return 'bg-red';
+    }
+
+    function hrLogout() {
+        localStorage.removeItem(HR_TOKEN_KEY);
+        location.reload();
+    }
+</script>
 </body>
 </html>

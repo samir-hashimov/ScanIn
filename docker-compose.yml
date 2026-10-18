@@ -1,0 +1,42 @@
+services:
+  # 1. PostgreSQL Verilənlər Bazası Servisi
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: scanin-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB_NAME:-scanin_db}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      TZ: Asia/Baku
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - scanin_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-scanin_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. ScanIn Spring Boot Backend Servisi
+  scanin-app:
+    build: .
+    container_name: scanin-backend
+    restart: unless-stopped
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Docker daxilində baza localhost yox, servisin adı (postgres-db) ilə çağırılır:
+      DB_HOST: postgres-db
+      TZ: Asia/Baku
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+
+volumes:
+  scanin_pgdata:
