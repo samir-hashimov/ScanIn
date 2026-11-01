@@ -501,27 +501,6 @@
             <p id="taskQrUrlText" style="margin-top:8px; color:#38bdf8; font-weight:bold; font-size:13px;"></p>
         </div>
 
-        <!-- 1C Simulyasiyası / Yeni Tapşırıq Təyin Etmə Formu -->
-        <div style="background:#0f172a; padding:16px; border-radius:12px; border:1px solid #334155; margin-bottom:20px;">
-            <h4 style="color:#cbd5e1; margin-bottom:12px; font-size:14px;">➕ İşçiyə Yeni Tapşırıq Yaz (Test və ya 1C
-                Simulyasiyası)</h4>
-            <div class="form-row">
-                <div class="form-group" style="max-width:150px;">
-                    <label>İşçi Kodu</label>
-                    <input type="text" id="taskEmpCode" placeholder="EMP-001" style="text-transform:uppercase;">
-                </div>
-                <div class="form-group" style="flex:2;">
-                    <label>Tapşırığın Adı</label>
-                    <input type="text" id="taskTitle" placeholder="Məs: Serme şirkətində alış maketinin hazırlanması">
-                </div>
-                <div class="form-group">
-                    <label>Son Tarix (Deadline)</label>
-                    <input type="datetime-local" id="taskDeadline">
-                </div>
-                <button class="btn btn-blue" onclick="assignNewTask()">Tapşırıq Göndər</button>
-            </div>
-        </div>
-
         <p style="font-size:13px; color:#94a3b8; margin-bottom:12px;">💡 <b>İpucu:</b> Hər işçinin tapşırıq detallarını
             (Bitirdikləri, Hazırda işlədikləri və Gözləyənlər) görmək üçün aşağıda işçinin kartının üzərinə klikləyin:
         </p>
@@ -811,31 +790,6 @@
         loadDailyReport();
     }
 
-    async function assignNewTask() {
-        const token = localStorage.getItem(HR_TOKEN_KEY);
-        const employeeCode = document.getElementById('taskEmpCode').value.trim();
-        const title = document.getElementById('taskTitle').value.trim();
-        const deadline = document.getElementById('taskDeadline').value;
-
-        if (!employeeCode || !title || !deadline) {
-            alert('Zəhmət olmasa İşçi kodunu, Tapşırıq adını və Deadline-ı doldurun!');
-            return;
-        }
-
-        const res = await fetch('/api/hr/tasks', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify({employeeCode, title, deadline})
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            alert(data.message || 'Xəta baş verdi!');
-            return;
-        }
-        document.getElementById('taskTitle').value = '';
-        loadHrTasks();
-    }
-
     async function loadHrTasks() {
         const token = localStorage.getItem(HR_TOKEN_KEY);
         const res = await fetch('/api/hr/tasks', {
@@ -865,7 +819,7 @@
                 };
             }
             if (t.status === 'PENDING') grouped[t.employeeCode].pending.push(t);
-            else if (t.status === 'IN_PROGRESS') grouped[t.employeeCode].inProgress.push(t);
+            else if (t.status === 'IN_PROGRESS' || t.status === 'PAUSED') grouped[t.employeeCode].inProgress.push(t);
             else grouped[t.employeeCode].completed.push(t);
         });
 
@@ -900,7 +854,12 @@
         if (list.length === 0) return '';
         let rows = list.map(t => `
             <tr>
-                <td><b>${t.title}</b> ${t.overdue ? '<span class="badge bg-red">Gecikir!</span>' : ''}</td>
+                <td><b>${t.title}</b>
+                    ${t.kind === 'ADHOC' ? '<span class="badge bg-blue">Fəaliyyət</span>' : ''}
+                    ${t.status === 'PAUSED' ? '<span class="badge bg-yellow">Fasilə</span>' : ''}
+                    ${t.overdue ? '<span class="badge bg-red">Gecikir!</span>' : ''}
+                    ${t.pausedFromTaskTitle ? `<div style="color:#94a3b8; font-size:11px; margin-top:4px;">Fasilə: ${t.pausedFromTaskTitle}</div>` : ''}
+                </td>
                 <td>${t.deadline ? t.deadline.replace('T', ' ').substring(0, 16) : '—'}</td>
                 <td>${t.startedAt ? t.startedAt.replace('T', ' ').substring(11, 16) : '—'}</td>
                 <td>${t.completedAt ? t.completedAt.replace('T', ' ').substring(11, 16) : '—'}</td>

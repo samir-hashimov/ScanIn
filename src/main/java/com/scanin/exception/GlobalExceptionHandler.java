@@ -61,6 +61,15 @@ public class GlobalExceptionHandler {
                 "timestamp", LocalDateTime.now()
         ));
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "ILLEGAL_STATE",
+                "message", ex.getMessage(),
+                "timestamp", LocalDateTime.now()
+        ));
+    }
     // İstifadəçi adı və ya şifrə səhv olduqda 401 UNAUTHORIZED qaytarır:
     @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthenticationException(Exception ex) {

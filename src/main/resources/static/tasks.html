@@ -124,6 +124,15 @@
             box-shadow: 0 0 18px rgba(245, 158, 11, 0.12);
         }
 
+        .task-card.paused-work {
+            border-color: rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 18px rgba(56, 189, 248, 0.12);
+        }
+
+        .task-card.adhoc-work {
+            border-color: rgba(168, 85, 247, 0.5);
+        }
+
         .task-card.done-work {
             border-color: rgba(34, 197, 94, 0.35);
             opacity: 0.88;
@@ -181,6 +190,16 @@
         .b-progress {
             background: rgba(245, 158, 11, 0.2);
             color: #fbbf24;
+        }
+
+        .b-paused {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+        }
+
+        .b-adhoc {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
         }
 
         .b-completed {
@@ -262,6 +281,82 @@
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: #fff;
             box-shadow: 0 6px 18px rgba(239, 68, 68, 0.3);
+        }
+
+        .action-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-row.two {
+            flex-direction: row;
+        }
+
+        .action-row.two .action-btn {
+            flex: 1;
+        }
+
+        .btn-pause {
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: #082f49;
+            box-shadow: 0 6px 18px rgba(14, 165, 233, 0.28);
+        }
+
+        .btn-resume {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: #052e16;
+            box-shadow: 0 6px 18px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-adhoc {
+            background: linear-gradient(135deg, #a855f7, #7c3aed);
+            color: #fff;
+            box-shadow: 0 6px 18px rgba(168, 85, 247, 0.28);
+        }
+
+        .live-timer {
+            font-variant-numeric: tabular-nums;
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            text-align: left;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 14px;
+            margin-bottom: 12px;
+            outline: none;
+        }
+
+        .time-split {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .time-split input {
+            width: 72px;
+            margin-bottom: 0;
+            text-align: center;
+        }
+
+        .time-split span {
+            font-size: 13px;
+            color: #94a3b8;
         }
 
         /* ŞİRİN TƏSDİQ MODALI (SWEET CONFIRM MODAL) */
@@ -369,6 +464,10 @@
             <span class="lbl">İcradadır</span>
         </div>
         <div class="stat-pill">
+            <span class="num" id="cntPaused" style="color:#38bdf8;">0</span>
+            <span class="lbl">Fasilə</span>
+        </div>
+        <div class="stat-pill">
             <span class="num" id="cntDone" style="color:#4ade80;">0</span>
             <span class="lbl">Bitib</span>
         </div>
@@ -393,16 +492,43 @@
     </div>
 </div>
 
+<div id="pauseModal" class="modal-overlay hidden">
+    <div class="modal-card" style="text-align:left;">
+        <span class="modal-emoji" style="display:block; text-align:center;">⏸️</span>
+        <h3 style="text-align:center;">Fasilə verildi</h3>
+        <p id="pauseModalHint" style="text-align:center;">Əsas tapşırığın vaxtı dayandı. İndi başqa fəaliyyət yaza və ya sonra davam edə bilərsən.</p>
+        <label class="field-label" for="adhocTitle">Fəaliyyətin adı</label>
+        <input class="modal-input" id="adhocTitle" maxlength="300"
+               placeholder="Fəaliyyəti daxil edin">
+        <label class="field-label" for="adhocHours">Bu işə ayırdığın vaxt</label>
+        <div class="time-split">
+            <input class="modal-input" type="number" id="adhocHours" min="0" max="12" value="1">
+            <span>saat</span>
+            <input class="modal-input" type="number" id="adhocMinutes" min="0" max="59" value="0">
+            <span>dəq</span>
+        </div>
+        <div class="modal-actions" style="flex-direction:column;">
+            <button class="btn-confirm" type="button" onclick="startAdHocFromPause()">▶️ Fəaliyyətə başla</button>
+            <button class="btn-confirm" type="button" style="background:linear-gradient(135deg,#38bdf8,#0284c7); color:#082f49;"
+                    onclick="resumeFromPauseModal()">▶️ Əsas tapşırığa davam et</button>
+            <button class="btn-cancel" type="button" onclick="closePauseModal()">Bağla (fasilə qalsın)</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const TOKEN_KEY = 'scanin_jwt_token';
     const USER_INFO_KEY = 'scanin_user_info';
+    const STATUS_ORDER = {IN_PROGRESS: 0, PAUSED: 1, PENDING: 2, COMPLETED: 3};
     let selectedTaskIdForFinish = null;
+    let pauseSourceTaskId = null;
     let openAccordionId = null;
+    let cachedTasks = [];
+    let timerHandle = null;
 
     window.onload = () => {
         const token = localStorage.getItem(TOKEN_KEY);
         if (!token) {
-            // Əgər işçi ilk dəfə birbaşa masa QR-nı oxudubsa, aktivləşdirmə üçün index.html-ə yönləndirək:
             window.location.href = '/index.html';
             return;
         }
@@ -410,6 +536,27 @@
         if (info) document.getElementById('empBadge').innerText = '👤 ' + info;
         loadMyTasks();
     };
+
+    async function apiPost(url, body) {
+        const token = localStorage.getItem(TOKEN_KEY);
+        const headers = {'Authorization': 'Bearer ' + token};
+        if (body !== undefined) headers['Content-Type'] = 'application/json';
+        const res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: body !== undefined ? JSON.stringify(body) : undefined
+        });
+        if (res.status === 401 || res.status === 403) {
+            window.location.href = '/index.html';
+            return null;
+        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            alert(data.message || 'Xəta baş verdi!');
+            return null;
+        }
+        return data;
+    }
 
     async function loadMyTasks() {
         const token = localStorage.getItem(TOKEN_KEY);
@@ -426,74 +573,170 @@
         renderTasks(tasks);
     }
 
+    function prepareLiveFields(tasks) {
+        const now = Date.now();
+        tasks.forEach(t => {
+            if (t.status === 'IN_PROGRESS' && t.lastResumedAt) {
+                const elapsedMin = Math.floor((now - new Date(t.lastResumedAt).getTime()) / 60000);
+                t._frozenSpent = Math.max(0, (t.spentMinutes || 0) - elapsedMin);
+            } else {
+                t._frozenSpent = t.spentMinutes || 0;
+            }
+        });
+    }
+
+    function liveSeconds(t) {
+        const frozenSec = (t._frozenSpent || 0) * 60;
+        if (t.status === 'IN_PROGRESS' && t.lastResumedAt) {
+            return frozenSec + Math.max(0, Math.floor((Date.now() - new Date(t.lastResumedAt).getTime()) / 1000));
+        }
+        return frozenSec;
+    }
+
+    function formatClock(totalSeconds) {
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        const pad = n => String(n).padStart(2, '0');
+        return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+    }
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function renderTasks(tasks) {
+        cachedTasks = tasks.slice().sort((a, b) => {
+            const sa = STATUS_ORDER[a.status] ?? 9;
+            const sb = STATUS_ORDER[b.status] ?? 9;
+            if (sa !== sb) return sa - sb;
+            return (a.id || 0) - (b.id || 0);
+        });
+        prepareLiveFields(cachedTasks);
+
         const listEl = document.getElementById('tasksList');
         listEl.innerHTML = '';
 
-        let p = 0, prog = 0, done = 0;
-        tasks.forEach(t => {
+        let p = 0, prog = 0, paused = 0, done = 0;
+        cachedTasks.forEach(t => {
             if (t.status === 'PENDING') p++;
             else if (t.status === 'IN_PROGRESS') prog++;
+            else if (t.status === 'PAUSED') paused++;
             else if (t.status === 'COMPLETED') done++;
         });
 
         document.getElementById('cntPending').innerText = p;
         document.getElementById('cntProgress').innerText = prog;
+        document.getElementById('cntPaused').innerText = paused;
         document.getElementById('cntDone').innerText = done;
 
-        if (tasks.length === 0) {
+        if (cachedTasks.length === 0) {
             listEl.innerHTML = `<div style="text-align:center; padding:30px 15px; color:#94a3b8;">
-                🎉 Hazırda aktiv tapşırığınız yoxdur! Раhat nəfəs ala bilərsiniz.
+                🎉 Hazırda aktiv tapşırığınız yoxdur! Rahat nəfəs ala bilərsiniz.
             </div>`;
             return;
         }
 
-        tasks.forEach((t, idx) => {
+        cachedTasks.forEach((t, idx) => {
             const isOpen = (openAccordionId === t.id) ? 'open' : '';
-            const cardState = t.status === 'IN_PROGRESS' ? 'active-work' : (t.status === 'COMPLETED' ? 'done-work' : '');
+            const isAdhoc = t.kind === 'ADHOC';
+            let cardState = '';
+            if (t.status === 'IN_PROGRESS') cardState = 'active-work';
+            else if (t.status === 'PAUSED') cardState = 'paused-work';
+            else if (t.status === 'COMPLETED') cardState = 'done-work';
+            if (isAdhoc) cardState += ' adhoc-work';
 
             let badgeHtml = '';
-            if (t.status === 'PENDING') badgeHtml = `<span class="badge b-pending">⏳ Gözləyir</span>`;
-            else if (t.status === 'IN_PROGRESS') badgeHtml = `<span class="badge b-progress">🔥 İcradadır</span>`;
-            else badgeHtml = `<span class="badge b-completed">✅ Bitdi (${t.spentMinutes} dəq)</span>`;
+            if (isAdhoc) badgeHtml += `<span class="badge b-adhoc">⚡ Fəaliyyət</span>`;
+            if (t.status === 'PENDING') badgeHtml += `<span class="badge b-pending">⏳ Gözləyir</span>`;
+            else if (t.status === 'IN_PROGRESS') badgeHtml += `<span class="badge b-progress">🔥 İcradadır</span>`;
+            else if (t.status === 'PAUSED') badgeHtml += `<span class="badge b-paused">⏸ Fasilə</span>`;
+            else badgeHtml += `<span class="badge b-completed">✅ Bitdi (${t.spentMinutes} dəq)</span>`;
 
             const deadlineStr = formatDateTime(t.deadline);
             const startStr = t.startedAt ? formatDateTime(t.startedAt) : 'Hələ başlanmayıb';
-            const endStr = t.completedAt ? formatDateTime(t.completedAt) : (t.status === 'IN_PROGRESS' ? 'Davam edir...' : '—');
+            let endStr = '—';
+            if (t.completedAt) endStr = formatDateTime(t.completedAt);
+            else if (t.status === 'IN_PROGRESS') endStr = 'Davam edir...';
+            else if (t.status === 'PAUSED') endStr = 'Fasilədə';
+
+            const spentLabel = t.status === 'IN_PROGRESS'
+                ? `<span class="live-timer" data-live-id="${t.id}">${formatClock(liveSeconds(t))}</span>`
+                : `${t.spentMinutes || 0} dəq`;
 
             let actionBtnHtml = '';
             if (t.status === 'PENDING') {
                 actionBtnHtml = `<button class="action-btn btn-start" onclick="startTask(event, ${t.id})">▶️ TAPŞIRIĞA BAŞLA</button>`;
             } else if (t.status === 'IN_PROGRESS') {
-                actionBtnHtml = `<button class="action-btn btn-finish" onclick="openSweetModal(event, ${t.id}, '${t.title.replace(/'/g, "\\'")}')">⏹️ TAPŞIRIĞI BİTİR</button>`;
+                actionBtnHtml = `
+                    <div class="action-row two">
+                        <button class="action-btn btn-pause" onclick="pauseTask(event, ${t.id})">⏸ Fasilə</button>
+                        <button class="action-btn btn-finish" onclick="openSweetModal(event, ${t.id})">⏹️ Bitir</button>
+                    </div>`;
+            } else if (t.status === 'PAUSED') {
+                actionBtnHtml = `
+                    <div class="action-row">
+                        <button class="action-btn btn-resume" onclick="resumeTask(event, ${t.id})">▶️ Davam et</button>
+                        <button class="action-btn btn-adhoc" onclick="openPauseModal(event, ${t.id})">📝 Fəaliyyət yaz</button>
+                        <button class="action-btn btn-finish" onclick="openSweetModal(event, ${t.id})">⏹️ Bitir</button>
+                    </div>`;
             } else {
-                actionBtnHtml = `<div style="text-align:center; color:#4ade80; font-size:13px; font-weight:600; padding:6px;">🎉 Bu tapşırığı uğurla tamamlamısınız! (Sərf olunan vaxt: ${t.spentMinutes} dəqiqə)</div>`;
+                actionBtnHtml = `<div style="text-align:center; color:#4ade80; font-size:13px; font-weight:600; padding:6px;">🎉 Tamamlandı. Sərf olunan vaxt: ${t.spentMinutes} dəqiqə</div>`;
             }
+
+            const parentNote = t.pausedFromTaskTitle
+                ? `<p style="font-size:12px; color:#c084fc; margin-bottom:10px;">Bu fəaliyyət «${escapeHtml(t.pausedFromTaskTitle)}» tapşırığının fasiləsində yazılıb.</p>`
+                : '';
+            const allocatedNote = t.allocatedMinutes
+                ? `<p style="font-size:12px; color:#94a3b8; margin-bottom:10px;">Ayrılan vaxt: ${t.allocatedMinutes} dəq</p>`
+                : '';
 
             listEl.innerHTML += `
                 <div class="task-card ${cardState} ${isOpen}" id="tcard-${t.id}">
                     <div class="task-summary" onclick="toggleTask(${t.id})">
                         <div class="task-left">
-                            <div class="task-title">${idx + 1}. ${t.title}</div>
+                            <div class="task-title">${idx + 1}. ${escapeHtml(t.title)}</div>
                             <div class="task-meta">
                                 <span>⏰ Son vaxt: <b style="color:${t.overdue ? '#f87171' : '#e2e8f0'}">${deadlineStr}</b></span>
                                 ${t.overdue ? '<span class="badge b-overdue">⚠️ Vaxtı keçib</span>' : ''}
                             </div>
                         </div>
-                        <div>${badgeHtml}</div>
+                        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">${badgeHtml}</div>
                     </div>
 
                     <div class="task-details">
-                        ${t.description ? `<p style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">📝 <b>Detal:</b> ${t.description}</p>` : ''}
+                        ${parentNote}
+                        ${t.description ? `<p style="font-size:13px; color:#cbd5e1; margin-bottom:12px;">📝 <b>Detal:</b> ${escapeHtml(t.description)}</p>` : ''}
+                        ${allocatedNote}
                         <div class="time-grid">
                             <div><span>🟢 Başlama vaxtı:</span> <b>${startStr}</b></div>
                             <div><span>🏁 Bitmə vaxtı:</span> <b>${endStr}</b></div>
+                            <div><span>⏱ Sərf olunan:</span> <b>${spentLabel}</b></div>
+                            <div><span>${t.status === 'PAUSED' ? '⏸ Fasilə:' : '📌 Növ:'}</span> <b>${t.status === 'PAUSED' ? formatDateTime(t.pausedAt) : (isAdhoc ? 'Fəaliyyət' : 'Tapşırıq')}</b></div>
                         </div>
                         ${actionBtnHtml}
                     </div>
                 </div>
             `;
         });
+
+        startLiveTicker();
+    }
+
+    function startLiveTicker() {
+        if (timerHandle) clearInterval(timerHandle);
+        timerHandle = setInterval(() => {
+            document.querySelectorAll('[data-live-id]').forEach(el => {
+                const id = Number(el.getAttribute('data-live-id'));
+                const task = cachedTasks.find(x => x.id === id);
+                if (task) el.textContent = formatClock(liveSeconds(task));
+            });
+        }, 1000);
     }
 
     function toggleTask(id) {
@@ -510,21 +753,88 @@
 
     async function startTask(e, id) {
         e.stopPropagation();
-        const token = localStorage.getItem(TOKEN_KEY);
-        const res = await fetch(`/api/tasks/${id}/start`, {
-            method: 'POST',
-            headers: {'Authorization': 'Bearer ' + token}
-        });
-        if (res.ok) {
+        const data = await apiPost(`/api/tasks/${id}/start`);
+        if (data) {
             openAccordionId = id;
             loadMyTasks();
         }
     }
 
-    function openSweetModal(e, id, title) {
+    function taskTitle(id) {
+        const t = cachedTasks.find(x => x.id === id);
+        return t ? t.title : '';
+    }
+
+    async function pauseTask(e, id) {
+        e.stopPropagation();
+        const data = await apiPost(`/api/tasks/${id}/pause`);
+        if (!data) return;
+        openAccordionId = id;
+        await loadMyTasks();
+        openPauseModal(null, id);
+    }
+
+    async function resumeTask(e, id) {
+        if (e) e.stopPropagation();
+        const data = await apiPost(`/api/tasks/${id}/resume`);
+        if (data) {
+            openAccordionId = id;
+            closePauseModal();
+            loadMyTasks();
+        }
+    }
+
+    function openPauseModal(e, id) {
+        if (e) e.stopPropagation();
+        pauseSourceTaskId = id;
+        document.getElementById('pauseModalHint').innerHTML =
+            `<b>«${escapeHtml(taskTitle(id))}»</b> tapşırığının vaxtı dayandı. Başqa işə vaxt ayırmaq üçün aşağıya yaz və başla.`;
+        document.getElementById('adhocTitle').value = '';
+        document.getElementById('adhocHours').value = '1';
+        document.getElementById('adhocMinutes').value = '0';
+        document.getElementById('pauseModal').classList.remove('hidden');
+    }
+
+    function closePauseModal() {
+        pauseSourceTaskId = null;
+        document.getElementById('pauseModal').classList.add('hidden');
+    }
+
+    async function resumeFromPauseModal() {
+        if (!pauseSourceTaskId) {
+            closePauseModal();
+            return;
+        }
+        await resumeTask(null, pauseSourceTaskId);
+    }
+
+    async function startAdHocFromPause() {
+        const title = document.getElementById('adhocTitle').value.trim();
+        if (!title) {
+            alert('Fəaliyyətin adını yazın. Məsələn: Samirə kod yazmağı öyrətdim');
+            return;
+        }
+        const hours = Number(document.getElementById('adhocHours').value || 0);
+        const minutes = Number(document.getElementById('adhocMinutes').value || 0);
+        let allocatedMinutes = (hours * 60) + minutes;
+        if (allocatedMinutes <= 0) allocatedMinutes = 60;
+
+        const body = {title, allocatedMinutes};
+        if (pauseSourceTaskId) body.pausedTaskId = pauseSourceTaskId;
+
+        const data = await apiPost('/api/tasks/ad-hoc', body);
+        if (!data) return;
+        const newId = data.id;
+        closePauseModal();
+        openAccordionId = newId;
+        loadMyTasks();
+    }
+
+    function openSweetModal(e, id) {
         e.stopPropagation();
         selectedTaskIdForFinish = id;
-        document.getElementById('sweetModalText').innerHTML = `<b>"${title}"</b> tapşırığını tam bitirdiyindən əminsən? <br><br>Bəlkə kiçik bir detal yaddan çıxıb, son dəfə yoxlamaq istəyərsən? 😊`;
+        document.getElementById('sweetModalText').innerHTML =
+            `<b>"${escapeHtml(taskTitle(id))}"</b> işini tam bitirdiyindən əminsən? Vaxt yalnız işlədiyin seqmentlərə görə (fasilələr çıxılmaqla) yazılacaq.`;
         document.getElementById('sweetModal').classList.remove('hidden');
     }
 
@@ -535,15 +845,9 @@
 
     async function confirmFinishTask() {
         if (!selectedTaskIdForFinish) return;
-        const token = localStorage.getItem(TOKEN_KEY);
-        const res = await fetch(`/api/tasks/${selectedTaskIdForFinish}/complete`, {
-            method: 'POST',
-            headers: {'Authorization': 'Bearer ' + token}
-        });
+        const data = await apiPost(`/api/tasks/${selectedTaskIdForFinish}/complete`);
         closeSweetModal();
-        if (res.ok) {
-            loadMyTasks();
-        }
+        if (data) loadMyTasks();
     }
 
     function formatDateTime(dtStr) {

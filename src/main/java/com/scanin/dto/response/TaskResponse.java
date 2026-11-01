@@ -1,5 +1,6 @@
 package com.scanin.dto.response;
 
+import com.scanin.util.TaskKind;
 import com.scanin.util.TaskStatus;
 import lombok.Builder;
 import lombok.Data;
@@ -17,8 +18,14 @@ public class TaskResponse {
     private String description;
     private LocalDateTime deadline;
     private TaskStatus status;
+    private TaskKind kind;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
+    private LocalDateTime pausedAt;
+    private LocalDateTime lastResumedAt;
     private Integer spentMinutes;
+    private Integer allocatedMinutes;
+    private Long pausedFromTaskId;
+    private String pausedFromTaskTitle;
     private boolean overdue; // Deadline keçibsə true olacaq (ekranda qırmızı yanması üçün)
 }

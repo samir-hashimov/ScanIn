@@ -1,5 +1,6 @@
 package com.scanin.dao.entity;
 
+import com.scanin.util.TaskKind;
 import com.scanin.util.TaskStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -45,8 +46,24 @@ public class EmployeeTask {
 
     private LocalDateTime completedAt;
 
+    private LocalDateTime pausedAt;
+
+    private LocalDateTime lastResumedAt;
+
     @Builder.Default
     private Integer spentMinutes = 0;
+
+    /** Planlaşdırılan vaxt (əsasən əlavə fəaliyyətlər üçün, dəqiqə) */
+    private Integer allocatedMinutes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private TaskKind kind = TaskKind.ASSIGNED;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "paused_from_task_id")
+    private EmployeeTask pausedFromTask;
 
     @Column(nullable = false, updatable = false)
     @Builder.Default

@@ -8,6 +8,7 @@ import com.scanin.dao.repository.EmployeeTaskRepository;
 import com.scanin.dao.repository.UserRepository;
 import com.scanin.exception.ResourceNotFoundException;
 import com.scanin.util.Role;
+import com.scanin.util.TaskKind;
 import com.scanin.util.TaskStatus;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -72,6 +73,7 @@ public class OneCSyncController {
                 .orElseGet(() -> EmployeeTask.builder()
                         .external1cId(dto.getExternal1cId())
                         .status(TaskStatus.PENDING)
+                        .kind(TaskKind.ASSIGNED)
                         .spentMinutes(0)
                         .createdAt(LocalDateTime.now())
                         .build());
