@@ -346,7 +346,7 @@
         <h2>ScanIn HR Panel</h2>
         <p class="login-subtitle">İdarəetmə panelinə daxil olmaq üçün məlumatlarınızı yazın</p>
 
-        <!-- Xəta Bildirişi Qutusu (Səhv şifrə və ya ad yazanda çıxır) -->
+        <!-- Xəta Bildirişi Qutusu -->
         <div id="loginErrorBox" class="error-alert hidden">
             <span>⚠️</span>
             <span id="loginErrorText">İstifadəçi adı və ya şifrə yanlışdır!</span>
@@ -380,7 +380,7 @@
         </div>
     </div>
 
-    <!-- QR Kod Modal Qutusu -->
+    <!-- Qapı QR Kod Modal Qutusu -->
     <div id="qrModal" class="panel hidden" style="text-align:center;">
         <h3>🚪 Qapıya Yapışdırılacaq QR Kod</h3>
         <p style="color:#94a3b8; font-size:14px; margin-bottom:15px;">İşçilər telefon kamerası ilə bu kodu oxutduqda
@@ -468,7 +468,7 @@
                     <th>Çıxış Statusu</th>
                     <th>Gecikmə / Əlavə İş</th>
                     <th>Ümumi İşlədiyi</th>
-                    <th>Qeyd / Səbəb</th>
+                    <th>Qeyd / Səbəb & Kontragent</th>
                 </tr>
                 </thead>
                 <tbody id="reportTableBody">
@@ -480,9 +480,68 @@
         </div>
     </div>
 
-    <!-- 3. Bütün İşçilərin Siyahısı -->
+    <!-- 3. İŞÇİLƏRİN FƏALİYYƏT VƏ TAPŞIRIQ MONİTORİNQİ (1C & HR) -->
     <div class="panel">
-        <h3>👥 Qeydiyyatda Olan Bütün İşçilər (EMP Kodları)</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+            <h3>🎯 İşçilərin Fəaliyyət və Tapşırıq Monitorinqi (Deadline Sıralı)</h3>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-green" onclick="toggleTaskQrModal()">🖥️ Masaüstü Tapşırıq QR Kodu</button>
+                <button class="btn btn-blue" onclick="loadHrTasks()">🔄 Tapşırıqları Yenilə</button>
+            </div>
+        </div>
+
+        <!-- Masaüstü QR Kod Qutusu -->
+        <div id="taskQrModal" class="hidden"
+             style="text-align:center; padding:16px; background:#0f172a; border-radius:12px; margin-bottom:18px; border:1px solid #334155;">
+            <h4 style="color:#38bdf8; margin-bottom:8px;">🖥️ İşçinin Masasına Qoyulacaq Tapşırıq QR Kodu</h4>
+            <p style="color:#94a3b8; font-size:13px; margin-bottom:12px;">İşçi masasında bu QR-ı oxutduqda birbaşa öz
+                tapşırıqlar paneli (<b>/tasks.html</b>) açılır:</p>
+            <img id="taskQrImage" src="" alt="Task QR"
+                 style="border:6px solid #fff; border-radius:10px; width:180px; height:180px;">
+            <p id="taskQrUrlText" style="margin-top:8px; color:#38bdf8; font-weight:bold; font-size:13px;"></p>
+        </div>
+
+        <!-- 1C Simulyasiyası / Yeni Tapşırıq Təyin Etmə Formu -->
+        <div style="background:#0f172a; padding:16px; border-radius:12px; border:1px solid #334155; margin-bottom:20px;">
+            <h4 style="color:#cbd5e1; margin-bottom:12px; font-size:14px;">➕ İşçiyə Yeni Tapşırıq Yaz (Test və ya 1C
+                Simulyasiyası)</h4>
+            <div class="form-row">
+                <div class="form-group" style="max-width:150px;">
+                    <label>İşçi Kodu</label>
+                    <input type="text" id="taskEmpCode" placeholder="EMP-001" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group" style="flex:2;">
+                    <label>Tapşırığın Adı</label>
+                    <input type="text" id="taskTitle" placeholder="Məs: Serme şirkətində alış maketinin hazırlanması">
+                </div>
+                <div class="form-group">
+                    <label>Son Tarix (Deadline)</label>
+                    <input type="datetime-local" id="taskDeadline">
+                </div>
+                <button class="btn btn-blue" onclick="assignNewTask()">Tapşırıq Göndər</button>
+            </div>
+        </div>
+
+        <p style="font-size:13px; color:#94a3b8; margin-bottom:12px;">💡 <b>İpucu:</b> Hər işçinin tapşırıq detallarını
+            (Bitirdikləri, Hazırda işlədikləri və Gözləyənlər) görmək üçün aşağıda işçinin kartının üzərinə klikləyin:
+        </p>
+
+        <!-- İşçilərin Fəaliyyət Kartları Siyahısı -->
+        <div id="employeeActivityList" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+
+    <!-- 4. Bütün İşçilərin Siyahısı -->
+    <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <h3 style="margin-bottom:0;">👥 Qeydiyyatda Olan Bütün İşçilər (EMP Kodları)</h3>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-green" onclick="syncEmployeesFrom1C()">🔄 1C-dən Bütün İşçiləri Çək</button>
+                <button class="btn btn-blue" onclick="loadAllUsers()">↻ Siyahını Yenilə</button>
+            </div>
+        </div>
+        <div id="syncEmpAlert" class="hidden"
+             style="margin-bottom:12px; padding:10px 14px; background:rgba(56,189,248,0.15); border:1px solid #38bdf8; border-radius:8px; color:#bae6fd; font-size:13.5px;"></div>
+
         <div style="overflow-x:auto;">
             <table>
                 <thead>
@@ -522,7 +581,6 @@
         const errText = document.getElementById('loginErrorText');
         errText.innerText = msg;
         errBox.classList.remove('hidden');
-        // Titrəmə animasiyasını yenidən işə salmaq üçün:
         errBox.style.animation = 'none';
         errBox.offsetHeight;
         errBox.style.animation = null;
@@ -550,7 +608,6 @@
                 body: JSON.stringify({username, password})
             });
 
-            // Cavab boş ola bilər deyə əvvəlcə text kimi oxuyuruq (JS çökməsin!):
             const rawText = await res.text();
             let data = {};
             try {
@@ -594,10 +651,36 @@
 
         loadDailyReport();
         loadAllUsers();
+        loadHrTasks();
     }
 
     function toggleQrModal() {
         document.getElementById('qrModal').classList.toggle('hidden');
+    }
+
+    function toggleTaskQrModal() {
+        const box = document.getElementById('taskQrModal');
+        box.classList.toggle('hidden');
+        const taskUrl = window.location.origin + '/tasks.html';
+        document.getElementById('taskQrUrlText').innerText = taskUrl;
+        document.getElementById('taskQrImage').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(taskUrl);
+    }
+
+    async function syncEmployeesFrom1C() {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        const alertBox = document.getElementById('syncEmpAlert');
+        alertBox.classList.remove('hidden');
+        alertBox.innerText = '⏳ 1C bazasından işçilər sorğulanır...';
+
+        await fetch('/api/1c/request-employees-sync', {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+
+        setTimeout(async () => {
+            await loadAllUsers();
+            alertBox.innerHTML = '✅ Sorğu aktivdir! (Əgər 1C-də avtomatik taymer qoşulmayıbsa, 1C-də <b>"🔄 ScanIn ilə Sinxronizasiya"</b> düyməsinə 1 dəfə klikləyin).';
+        }, 1500);
     }
 
     async function createEmployee() {
@@ -684,6 +767,21 @@
                 item.earlyLeaveReason ? `Tez çıxış: ${item.earlyLeaveReason}` : '',
                 item.systemNote || ''].filter(Boolean).join(' | ');
 
+            let fieldHtml = '';
+            if (item.fieldVisit) {
+                if (item.approvalStatus === 'PENDING') {
+                    fieldHtml = `<div style="margin-top:6px; padding:6px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; border-radius:6px;">
+                        <b style="color:#fbbf24;">🏢 Kontragent: ${item.counterpartyName}</b><br>
+                        <button onclick="verifyField(${item.attendanceId}, true)" style="margin-top:4px; padding:4px 8px; background:#22c55e; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">✅ Təsdiqlə</button>
+                        <button onclick="verifyField(${item.attendanceId}, false)" style="margin-top:4px; padding:4px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">❌ Rədd et</button>
+                    </div>`;
+                } else if (item.approvalStatus === 'APPROVED') {
+                    fieldHtml = `<br><span class="badge bg-green">🏢 ${item.counterpartyName} (HR Təsdiqlədi ✅)</span>`;
+                } else if (item.approvalStatus === 'REJECTED') {
+                    fieldHtml = `<br><span class="badge bg-red">🏢 ${item.counterpartyName} (Rədd Edildi ❌)</span>`;
+                }
+            }
+
             tbody.innerHTML += `
                 <tr>
                     <td><b>${item.employeeCode}</b></td>
@@ -694,7 +792,7 @@
                     <td><span class="badge ${getDepartureBadge(item.departureStatus)}">${item.departureStatus}</span></td>
                     <td><span style="color:#f87171;">-${item.lateMinutes} dəq</span> / <span style="color:#4ade80;">+${item.overtimeMinutes} dəq</span></td>
                     <td><b>${hrs} saat ${mins} dəq</b></td>
-                    <td style="max-width:260px; color:#cbd5e1;">${notes || '—'}</td>
+                    <td style="max-width:260px; color:#cbd5e1;">${notes || '—'} ${fieldHtml}</td>
                 </tr>
             `;
         });
@@ -702,6 +800,125 @@
         if (earliestCheckout) {
             document.getElementById('statFirstLeave').innerText = `${earliestCheckout.fullName} (${earliestCheckout.checkOutTime.substring(11, 16)})`;
         }
+    }
+
+    async function verifyField(attendanceId, approved) {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        await fetch(`/api/hr/attendance/${attendanceId}/verify?approved=${approved}`, {
+            method: 'POST',
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        loadDailyReport();
+    }
+
+    async function assignNewTask() {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        const employeeCode = document.getElementById('taskEmpCode').value.trim();
+        const title = document.getElementById('taskTitle').value.trim();
+        const deadline = document.getElementById('taskDeadline').value;
+
+        if (!employeeCode || !title || !deadline) {
+            alert('Zəhmət olmasa İşçi kodunu, Tapşırıq adını və Deadline-ı doldurun!');
+            return;
+        }
+
+        const res = await fetch('/api/hr/tasks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+            body: JSON.stringify({employeeCode, title, deadline})
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.message || 'Xəta baş verdi!');
+            return;
+        }
+        document.getElementById('taskTitle').value = '';
+        loadHrTasks();
+    }
+
+    async function loadHrTasks() {
+        const token = localStorage.getItem(HR_TOKEN_KEY);
+        const res = await fetch('/api/hr/tasks', {
+            headers: {'Authorization': 'Bearer ' + token}
+        });
+        if (!res.ok) return;
+        const tasks = await res.json();
+
+        const container = document.getElementById('employeeActivityList');
+        container.innerHTML = '';
+
+        if (tasks.length === 0) {
+            container.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:16px;">Hələ heç bir işçiyə tapşırıq təyin edilməyib.</div>';
+            return;
+        }
+
+        const grouped = {};
+        tasks.forEach(t => {
+            if (!grouped[t.employeeCode]) {
+                grouped[t.employeeCode] = {
+                    code: t.employeeCode,
+                    name: t.employeeFullName,
+                    pos: t.employeePosition,
+                    pending: [],
+                    inProgress: [],
+                    completed: []
+                };
+            }
+            if (t.status === 'PENDING') grouped[t.employeeCode].pending.push(t);
+            else if (t.status === 'IN_PROGRESS') grouped[t.employeeCode].inProgress.push(t);
+            else grouped[t.employeeCode].completed.push(t);
+        });
+
+        Object.values(grouped).forEach(emp => {
+            const detailId = 'emp-act-' + emp.code;
+            container.innerHTML += `
+                <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; overflow:hidden;">
+                    <div onclick="document.getElementById('${detailId}').classList.toggle('hidden')"
+                         style="padding:14px 18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div>
+                            <b style="color:#38bdf8; font-size:15px;">${emp.code}</b> — <b style="font-size:15px;">${emp.name}</b>
+                            <span style="color:#94a3b8; font-size:13px;">(${emp.pos})</span>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <span class="badge bg-yellow">🔥 İcrada: ${emp.inProgress.length}</span>
+                            <span class="badge bg-blue">⏳ Gözləyir: ${emp.pending.length}</span>
+                            <span class="badge bg-green">✅ Bitib: ${emp.completed.length}</span>
+                        </div>
+                    </div>
+
+                    <div id="${detailId}" class="hidden" style="padding:14px 18px; border-top:1px solid #1e293b; background:rgba(30,41,59,0.5);">
+                        ${renderHrTaskTable('🔥 Hazırda İşlədiyi Tapşırıqlar', emp.inProgress)}
+                        ${renderHrTaskTable('⏳ Gözləmədə Olan Tapşırıqlar', emp.pending)}
+                        ${renderHrTaskTable('✅ Bitirdiyi Tapşırıqlar', emp.completed)}
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function renderHrTaskTable(sectionTitle, list) {
+        if (list.length === 0) return '';
+        let rows = list.map(t => `
+            <tr>
+                <td><b>${t.title}</b> ${t.overdue ? '<span class="badge bg-red">Gecikir!</span>' : ''}</td>
+                <td>${t.deadline ? t.deadline.replace('T', ' ').substring(0, 16) : '—'}</td>
+                <td>${t.startedAt ? t.startedAt.replace('T', ' ').substring(11, 16) : '—'}</td>
+                <td>${t.completedAt ? t.completedAt.replace('T', ' ').substring(11, 16) : '—'}</td>
+                <td><b>${t.spentMinutes ? t.spentMinutes + ' dəq' : '—'}</b></td>
+            </tr>
+        `).join('');
+
+        return `
+            <div style="margin-bottom:14px;">
+                <h5 style="color:#cbd5e1; margin-bottom:6px; font-size:13px;">${sectionTitle}</h5>
+                <table style="margin-top:4px; font-size:13px;">
+                    <thead>
+                        <tr><th>Tapşırıq</th><th>Deadline</th><th>Başladı</th><th>Bitirdi</th><th>Sərf olunan vaxt</th></tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
     }
 
     async function loadAllUsers() {

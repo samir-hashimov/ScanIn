@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/attendance")
 @RequiredArgsConstructor
@@ -55,5 +57,21 @@ public class AttendanceController {
         String loggedInUsername = authentication.getName();
         ScanResponse response = attendanceService.processQrScan(loggedInUsername, actionRequest, httpRequest);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/field-visit")
+    public ResponseEntity<ScanResponse> recordFieldVisit(
+            Authentication authentication,
+            @Valid @RequestBody com.scanin.dto.request.FieldVisitRequest request) {
+        return ResponseEntity.ok(attendanceService.recordFieldVisit(authentication.getName(), request));
+    }
+
+    @PostMapping("/attendance/{id}/verify")
+    public ResponseEntity<Map<String, String>> verifyFieldVisit(
+            @PathVariable Long id,
+            @RequestParam boolean approved) {
+        attendanceService.verifyFieldVisit(id, approved);
+        String msg = approved ? "Kontragent səfəri təsdiqləndi!" : "Kontragent səfəri rədd edildi!";
+        return ResponseEntity.ok(Map.of("message", msg));
     }
 }

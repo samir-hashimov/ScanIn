@@ -92,9 +92,13 @@ public class UserService {
     }
 
     private String generateNextEmployeeCode() {
-        long nextNumber = userRepository.findTopByOrderByIdDesc()
-                .map(lastUser -> lastUser.getId() + 1)
-                .orElse(1L);
+        long nextNumber = userRepository.findAll().stream()
+                .map(User::getEmployeeCode)
+                .filter(code -> code != null)
+                .mapToLong(code -> Long.parseLong(code.substring(4)))
+                .max()
+                .orElse(-1L) + 1;
+
         return String.format("EMP-%03d", nextNumber);
     }
 }

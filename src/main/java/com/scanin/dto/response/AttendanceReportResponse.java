@@ -11,20 +11,23 @@ import java.time.LocalDateTime;
 @Builder
 public class AttendanceReportResponse {
     private Long attendanceId;
-    private String employeeCode;      // Məs: EMP-001 (3 dənə Nurayı ayırmaq üçün)
-    private String fullName;          // Məs: Nuray Əliyeva
-    private String position;          // Məs: Mühasib
+    private String employeeCode;
+    private String fullName;
+    private String position;
     private LocalDate workDate;
     private LocalDateTime checkInTime;
     private LocalDateTime checkOutTime;
     private ArrivalStatus arrivalStatus;
     private DepartureStatus departureStatus;
-    private boolean isFirstToArrive;  // 🥇 İlk gələn
-    private boolean isLastToLeave;    // 🌙 Son çıxan
-    private int lateMinutes;          // Məs: 20 dəq
-    private int overtimeMinutes;      // Məs: 20 dəq
-    private int totalWorkedMinutes;   // Məs: 540 dəq (9 saat)
+    private boolean isFirstToArrive;
+    private boolean isLastToLeave;
+    private int lateMinutes;
+    private int overtimeMinutes;
+    private int totalWorkedMinutes;
     private String lateReason;
     private String earlyLeaveReason;
-    private String systemNote;        // Məs: ⚠️ Avtomatik bağlandı (Unudulub)
+    private String systemNote;
+    private boolean fieldVisit;
+    private String counterpartyName;
+    private String approvalStatus;
 }

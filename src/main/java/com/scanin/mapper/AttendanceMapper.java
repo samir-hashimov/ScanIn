@@ -14,6 +14,9 @@ public interface AttendanceMapper {
     @Mapping(source = "user.employeeCode", target = "employeeCode")
     @Mapping(source = "user.fullName", target = "fullName")
     @Mapping(source = "user.position", target = "position")
+    @Mapping(target = "fieldVisit", source = "fieldVisit")
+    @Mapping(target = "counterpartyName", source = "counterpartyName")
+    @Mapping(target = "approvalStatus", expression = "java(attendance.getApprovalStatus() != null ? attendance.getApprovalStatus().name() : \"NOT_REQUIRED\")")
     AttendanceReportResponse toReportResponse(Attendance attendance);
 
     List<AttendanceReportResponse> toReportResponseList(List<Attendance> attendances);

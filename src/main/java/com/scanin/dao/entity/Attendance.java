@@ -1,5 +1,6 @@
 package com.scanin.dao.entity;
 
+import com.scanin.util.ApprovalStatus;
 import com.scanin.util.ArrivalStatus;
 import com.scanin.util.DepartureStatus;
 import jakarta.persistence.*;
@@ -67,4 +68,16 @@ public class Attendance {
 
     @Column(name = "system_note", length = 255)
     private String systemNote;
+
+    @Column(name = "is_field_visit")
+    @Builder.Default
+    private boolean fieldVisit = false;
+
+    @Column(name = "counterparty_name", length = 150)
+    private String counterpartyName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_status", length = 20)
+    @Builder.Default
+    private ApprovalStatus approvalStatus = ApprovalStatus.NOT_REQUIRED;
 }

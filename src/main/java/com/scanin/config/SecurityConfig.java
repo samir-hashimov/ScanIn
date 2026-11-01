@@ -29,7 +29,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 1. Login endpoint-i və HTML/JS səhifələri hamıya açıqdır:
-                        .requestMatchers("/api/auth/**", "/", "/index.html", "/hr.html", "/static/**", "/*.js", "/*.css").permitAll()
+                        .requestMatchers("/api/auth/**", "/", "/index.html","/tasks.html","/field.html", "/hr.html", "/static/**", "/*.js", "/*.css").permitAll()
                         // 2. Swagger açıq olsun (test üçün):
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // 3. Dinamik IP yeniləmə scripti öz gizli şifrəsi (secret) ilə işlədiyi üçün açıq buraxırıq:
@@ -38,6 +38,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/hr/**").hasAnyRole("HR", "ADMIN")
                         // 5. QR Kod oxutma (/api/attendance/scan) üçün mütləq login olmuş (Token-li) işçi olmalıdır:
                         .requestMatchers("/api/attendance/**").hasAnyRole("EMPLOYEE", "HR", "ADMIN")
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/hr.html",
+                                "/tasks.html",
+                                "/field.html",
+                                "/api/auth/**",
+                                "/api/1c/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

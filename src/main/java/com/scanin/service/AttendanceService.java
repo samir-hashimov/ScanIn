@@ -3,6 +3,7 @@ package com.scanin.service;
 import com.scanin.dao.entity.Attendance;
 import com.scanin.dao.entity.User;
 import com.scanin.dao.repository.AttendanceRepository;
+import com.scanin.dao.repository.UserRepository;
 import com.scanin.dto.request.ScanActionRequest;
 import com.scanin.dto.response.AttendanceReportResponse;
 import com.scanin.dto.response.ScanResponse;
@@ -30,6 +31,7 @@ public class AttendanceService {
     private final OfficeIpService officeIpService;
     private final NotificationService notificationService;
     private final AttendanceMapper attendanceMapper;
+    private final UserRepository userRepository ;
 
     // İşçi QR oxudanda çağırılan ƏSAS METOD
     @Transactional
@@ -240,5 +242,93 @@ public class AttendanceService {
         if (reason == null || reason.trim().length() < 5) {
             throw new IllegalArgumentException(errorMessage + " (Ən azı 5 simvolluq real səbəb qeyd edin!)");
         }
+    }
+
+    // 1. KONTRAGENT YANINDAN GİRİŞ / ÇIXIŞ (IP Yoxlanışı YOXDUR!)
+    @Transactional
+    public ScanResponse recordFieldVisit(String username, com.scanin.dto.request.FieldVisitRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new com.scanin.exception.ResourceNotFoundException("İstifadəçi tapılmadı!"));
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
+
+        Optional<Attendance> existingOpt = attendanceRepository.findByUserAndWorkDate(user, today);
+
+        // GİRİŞ (CHECK-IN):
+        if (existingOpt.isEmpty()) {
+            long lateMins = java.time.Duration.between(user.getShiftStartTime(), now.toLocalTime()).toMinutes();
+            int lateMinutes = (int) Math.max(0, lateMins);
+            ArrivalStatus arrivalStatus = lateMinutes > 0 ? ArrivalStatus.LATE : ArrivalStatus.ON_TIME;
+
+            Attendance attendance = Attendance.builder()
+                    .user(user)
+                    .workDate(today)
+                    .checkInTime(now)
+                    .arrivalStatus(arrivalStatus)
+                    .departureStatus(DepartureStatus.WORKING)
+                    .lateMinutes(lateMinutes)
+                    .lateReason(request.getNote())
+                    .fieldVisit(true)
+                    .counterpartyName(request.getCounterpartyName().trim())
+                    .approvalStatus(com.scanin.util.ApprovalStatus.PENDING)
+                    .build();
+
+            attendanceRepository.save(attendance);
+
+            return ScanResponse.builder()
+                    .actionType("FIELD_CHECK_IN")
+                    .employeeInfo(user.getFullName() + " (" + user.getPosition() + ")")
+                    .message("📍 Kontragent (" + request.getCounterpartyName() + ") yanında GİRİŞ qeydə alındı! Sorğunuz HR təsdiqinə göndərildi.")
+                    .build();
+        }
+
+        // ÇIXIŞ (CHECK-OUT):
+        Attendance attendance = existingOpt.get();
+        if (attendance.getCheckOutTime() != null) {
+            throw new IllegalStateException("Siz bu gün üçün artıq çıxış etmisiniz!");
+        }
+
+        attendance.setCheckOutTime(now);
+        attendance.setFieldVisit(true);
+        attendance.setCounterpartyName(request.getCounterpartyName().trim());
+        if (attendance.getApprovalStatus() == com.scanin.util.ApprovalStatus.NOT_REQUIRED) {
+            attendance.setApprovalStatus(com.scanin.util.ApprovalStatus.PENDING);
+        }
+        if (request.getNote() != null && !request.getNote().isBlank()) {
+            attendance.setEarlyLeaveReason(request.getNote());
+        }
+
+        long workedMins = java.time.Duration.between(attendance.getCheckInTime(), now).toMinutes();
+        attendance.setTotalWorkedMinutes((int) Math.max(0, workedMins));
+
+        long overMins = java.time.Duration.between(user.getShiftEndTime(), now.toLocalTime()).toMinutes();
+        attendance.setOvertimeMinutes((int) Math.max(0, overMins));
+        attendance.setDepartureStatus(now.toLocalTime().isBefore(user.getShiftEndTime())
+                ? DepartureStatus.EARLY_LEAVE : DepartureStatus.COMPLETED);
+
+        attendanceRepository.save(attendance);
+
+        return ScanResponse.builder()
+                .actionType("FIELD_CHECK_OUT")
+                .employeeInfo(user.getFullName() + " (" + user.getPosition() + ")")
+                .message("✅ Kontragent (" + request.getCounterpartyName() + ") yanından ÇIXIŞ qeydə alındı! HR təsdiqi gözlənilir.")
+                .build();
+    }
+
+    // 2. HR TƏSDİQ VƏ YA RƏDD METODU:
+    @Transactional
+    public void verifyFieldVisit(Long attendanceId, boolean approved) {
+        Attendance attendance = attendanceRepository.findById(attendanceId)
+                .orElseThrow(() -> new com.scanin.exception.ResourceNotFoundException("Qeyd tapılmadı!"));
+
+        if (approved) {
+            attendance.setApprovalStatus(com.scanin.util.ApprovalStatus.APPROVED);
+            attendance.setSystemNote("✅ HR tərəfindən kontragent səfəri təsdiqləndi.");
+        } else {
+            attendance.setApprovalStatus(com.scanin.util.ApprovalStatus.REJECTED);
+            attendance.setSystemNote("❌ HR tərəfindən RƏDD EDİLDİ (Kontragent səfəri təsdiqlənmədi!).");
+        }
+        attendanceRepository.save(attendance);
     }
 }
