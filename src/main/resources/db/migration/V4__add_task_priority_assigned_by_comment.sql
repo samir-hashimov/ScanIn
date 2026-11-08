@@ -7,8 +7,10 @@ ALTER TABLE employee_tasks
 
 UPDATE employee_tasks
 SET assigned_by = 'HR / Müdiriyyət'
-WHERE assigned_by IS NULL OR assigned_by = '';
+WHERE assigned_by IS NULL
+   OR assigned_by = '';
 
 UPDATE employee_tasks
 SET priority = 'NORMAL'
-WHERE priority IS NULL OR priority = '';
+WHERE priority IS NULL
+   OR priority = '';
