@@ -5,15 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ScanIn — Ofis Giriş-Çıxış Sistemi</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
         body {
             background: radial-gradient(circle at top left, #1e293b, #0f172a 70%);
-            color: #f8fafc; min-height: 100vh;
-            display: flex; align-items: center; justify-content: center; padding: 20px;
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
 
         .card {
-            width: 100%; max-width: 430px;
+            width: 100%;
+            max-width: 430px;
             background: rgba(30, 41, 59, 0.78);
             backdrop-filter: blur(18px);
             padding: 36px 30px;
@@ -24,119 +35,257 @@
         }
 
         .brand-icon {
-            width: 62px; height: 62px; margin: 0 auto 14px;
+            width: 62px;
+            height: 62px;
+            margin: 0 auto 14px;
             background: linear-gradient(135deg, #38bdf8, #0284c7);
-            border-radius: 18px; display: flex; align-items: center; justify-content: center;
-            font-size: 28px; box-shadow: 0 10px 25px rgba(56, 189, 248, 0.35);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 10px 25px rgba(56, 189, 248, 0.35);
         }
-        h1 { font-size: 25px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-        .subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 24px; }
+
+        h1 {
+            font-size: 25px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
 
         /* TAB DÜYMƏLƏRİ */
         .tabs {
-            display: flex; gap: 8px; margin-bottom: 22px;
-            background: rgba(15, 23, 42, 0.6); padding: 6px; border-radius: 14px;
+            display: flex;
+            gap: 8px;
+            margin-bottom: 22px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 6px;
+            border-radius: 14px;
             border: 1px solid rgba(255, 255, 255, 0.06);
         }
+
         .tab-btn {
-            flex: 1; padding: 10px; border: none; border-radius: 10px;
-            background: transparent; color: #94a3b8; cursor: pointer;
-            font-weight: 600; font-size: 14px; transition: 0.25s;
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: 0.25s;
         }
+
         .tab-btn.active {
             background: linear-gradient(135deg, #38bdf8, #0284c7);
-            color: #0f172a; box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+            color: #0f172a;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
         }
 
         /* XƏTA BİLDİRİŞ QUTUSU */
         .error-alert {
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.5);
-            color: #fca5a5; padding: 12px 14px; border-radius: 12px;
-            font-size: 13.5px; font-weight: 500; margin-bottom: 18px;
-            text-align: left; display: flex; align-items: center; gap: 10px;
+            color: #fca5a5;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 13.5px;
+            font-weight: 500;
+            margin-bottom: 18px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
             animation: shake 0.35s ease-in-out;
         }
+
         @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-6px); }
-            75% { transform: translateX(6px); }
+            0%, 100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-6px);
+            }
+            75% {
+                transform: translateX(6px);
+            }
         }
 
         /* INPUT XANALARI */
-        .form-group { text-align: left; margin-bottom: 16px; position: relative; }
-        label { display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 7px; }
+        .form-group {
+            text-align: left;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 7px;
+        }
+
         input, textarea {
-            width: 100%; padding: 13px 15px; border-radius: 12px;
-            border: 1px solid #334155; background: rgba(15, 23, 42, 0.85);
-            color: #fff; font-size: 15px; outline: none; transition: 0.2s;
+            width: 100%;
+            padding: 13px 15px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            background: rgba(15, 23, 42, 0.85);
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s;
         }
+
         input:focus, textarea:focus {
-            border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
         }
+
         .toggle-pass {
-            position: absolute; right: 14px; top: 38px; cursor: pointer;
-            color: #64748b; font-size: 16px; user-select: none;
+            position: absolute;
+            right: 14px;
+            top: 38px;
+            cursor: pointer;
+            color: #64748b;
+            font-size: 16px;
+            user-select: none;
         }
 
         /* DÜYMƏLƏR */
         .btn {
-            width: 100%; padding: 14px; border: none; border-radius: 12px;
-            font-size: 15.5px; font-weight: 700; cursor: pointer; transition: 0.25s; margin-top: 6px;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.25s;
+            margin-top: 6px;
         }
+
         .btn-primary {
-            background: linear-gradient(135deg, #38bdf8, #0284c7); color: #0f172a;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: #0f172a;
             box-shadow: 0 8px 20px rgba(56, 189, 248, 0.25);
         }
-        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(56, 189, 248, 0.4); color: #fff; }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(56, 189, 248, 0.4);
+            color: #fff;
+        }
+
         .btn-warning {
-            background: linear-gradient(135deg, #fbbf24, #d97706); color: #0f172a;
+            background: linear-gradient(135deg, #fbbf24, #d97706);
+            color: #0f172a;
             box-shadow: 0 8px 20px rgba(245, 158, 11, 0.25);
         }
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1); color: #f8fafc;
-            border: 1px solid rgba(255, 255, 255, 0.15); margin-top: 10px;
-        }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.18); }
 
-        /* QR OXUTMA NƏTİCƏ EKRANI (NÖVBƏTİ GÜNLƏRDƏ BİRBAŞA AÇILAN HİSSƏ) */
-        .emp-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3);
-            color: #38bdf8; padding: 7px 16px; border-radius: 999px;
-            font-size: 13.5px; font-weight: 600; margin-bottom: 18px;
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            margin-top: 10px;
         }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        /* QR OXUTMA NƏTİCƏ EKRANI */
+        .emp-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            padding: 7px 16px;
+            border-radius: 999px;
+            font-size: 13.5px;
+            font-weight: 600;
+            margin-bottom: 18px;
+        }
+
         .result-icon {
-            font-size: 48px; margin-bottom: 12px; display: block;
+            font-size: 48px;
+            margin-bottom: 12px;
+            display: block;
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+
         @keyframes popIn {
-            0% { transform: scale(0.4); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+            0% {
+                transform: scale(0.4);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
+
         .status-box {
-            padding: 22px 18px; border-radius: 16px; margin-top: 8px;
-            line-height: 1.55; font-size: 16px; font-weight: 500;
+            padding: 22px 18px;
+            border-radius: 16px;
+            margin-top: 8px;
+            line-height: 1.55;
+            font-size: 16px;
+            font-weight: 500;
         }
+
         .status-success {
-            background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.45); color: #bbf7d0;
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.45);
+            color: #bbf7d0;
         }
+
         .status-warning {
-            background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.45); color: #fde68a;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.45);
+            color: #fde68a;
         }
+
         .status-error {
-            background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.45); color: #fecaca;
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.45);
+            color: #fecaca;
         }
 
         .time-stamp {
-            margin-top: 12px; font-size: 12.5px; color: #94a3b8;
+            margin-top: 12px;
+            font-size: 12.5px;
+            color: #94a3b8;
         }
-        .hidden { display: none !important; }
+
+        .hidden {
+            display: none !important;
+        }
+
         .logout-link {
-            display: inline-block; margin-top: 24px; font-size: 12px;
-            color: #64748b; text-decoration: underline; cursor: pointer; transition: 0.2s;
+            display: inline-block;
+            margin-top: 24px;
+            font-size: 12px;
+            color: #64748b;
+            text-decoration: underline;
+            cursor: pointer;
+            transition: 0.2s;
         }
-        .logout-link:hover { color: #94a3b8; }
+
+        .logout-link:hover {
+            color: #94a3b8;
+        }
     </style>
 </head>
 <body>
@@ -146,20 +295,18 @@
     <h1>ScanIn</h1>
     <p class="subtitle">Ofis Giriş-Çıxış Sistemi</p>
 
-    <!-- 1. AUTH BÖLMƏSİ (Yalnız 1-ci dəfə telefonda Token olmayanda görünür) -->
+    <!-- 1. AUTH BÖLMƏSİ -->
     <div id="authSection" class="hidden">
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('activate')">İlk Aktivləşdirmə</button>
             <button class="tab-btn" onclick="switchTab('login')">Daxil Ol (Login)</button>
         </div>
 
-        <!-- Xəta Bildiriş Qutusu -->
         <div id="authErrorBox" class="error-alert hidden">
             <span>⚠️</span>
             <span id="authErrorText">Xəta baş verdi!</span>
         </div>
 
-        <!-- İlk dəfə EMP-001 ilə aktivləşdirmə formu -->
         <div id="activateForm">
             <div class="form-group">
                 <label>HR-ın verdiyi İşçi Kodu (məs: EMP-001)</label>
@@ -174,10 +321,10 @@
                 <input type="password" id="actPassword" placeholder="••••••••" autocomplete="new-password">
                 <span class="toggle-pass" onclick="togglePass('actPassword')">👁️</span>
             </div>
-            <button id="actBtn" class="btn btn-primary" onclick="activateAccount()">Hesabı Aktivləşdir və Giriş Et</button>
+            <button id="actBtn" class="btn btn-primary" onclick="activateAccount()">Hesabı Aktivləşdir və Giriş Et
+            </button>
         </div>
 
-        <!-- Mövcud hesabla Login formu -->
         <div id="loginForm" class="hidden">
             <div class="form-group">
                 <label>İstifadəçi Adı</label>
@@ -192,7 +339,7 @@
         </div>
     </div>
 
-    <!-- 2. BİRBAŞA QR TƏSDİQ EKRANI (Növbəti günlərdə heç nə soruşmadan birbaşa bura açılır!) -->
+    <!-- 2. BİRBAŞA QR TƏSDİQ EKRANI -->
     <div id="scanSection" class="hidden">
         <div id="employeeBadge" class="emp-badge">👤 Yüklənir...</div>
 
@@ -208,10 +355,10 @@
                 <label>📝 Gecikmə səbəbinizi qeyd edin (min 5 simvol):</label>
                 <textarea id="lateReasonInput" rows="3" placeholder="Gecikmə səbəbini bura yazın..."></textarea>
             </div>
-            <button class="btn btn-warning" onclick="submitReason(false)">Səbəbi Təsdiqlə və Göndər</button>
+            <button class="btn btn-warning" onclick="submitReason(false)">Səbəbi Təsdiqlə və Giriş Et</button>
         </div>
 
-        <!-- 10 dəqiqə içində təkrar oxudanda açılan Cooldown Qutusu -->
+        <!-- Erkən çıxış və ya 10 dəqiqə içində təkrar oxudanda açılan Qutu -->
         <div id="earlyLeaveBox" class="hidden" style="margin-top: 18px;">
             <button class="btn btn-secondary" onclick="cancelEarlyLeave()">😅 Əlim dəydi, ofisdə qalıram</button>
             <div class="form-group" style="margin-top: 16px;">
@@ -229,14 +376,11 @@
     const TOKEN_KEY = 'scanin_jwt_token';
     const USER_INFO_KEY = 'scanin_user_info';
 
-    // Səhifə açılan saniyədə işə düşür:
     window.onload = () => {
         const token = localStorage.getItem(TOKEN_KEY);
         if (!token) {
-            // Yalnız 1-ci dəfə (Token yoxdursa) qeydiyyat ekranını göstər:
             document.getElementById('authSection').classList.remove('hidden');
         } else {
-            // Token varsa -> Qeydiyyat səhifəsini HEÇ GÖSTƏRMƏ, birbaşa bazaya yaz və mesajı çıxar!
             document.getElementById('scanSection').classList.remove('hidden');
             performQrScan(null);
         }
@@ -260,17 +404,18 @@
         document.getElementById('authErrorBox').classList.add('hidden');
         const btns = document.querySelectorAll('.tab-btn');
         if (tab === 'activate') {
-            btns[0].classList.add('active'); btns[1].classList.remove('active');
+            btns[0].classList.add('active');
+            btns[1].classList.remove('active');
             document.getElementById('activateForm').classList.remove('hidden');
             document.getElementById('loginForm').classList.add('hidden');
         } else {
-            btns[1].classList.add('active'); btns[0].classList.remove('active');
+            btns[1].classList.add('active');
+            btns[0].classList.remove('active');
             document.getElementById('loginForm').classList.remove('hidden');
             document.getElementById('activateForm').classList.add('hidden');
         }
     }
 
-    // 1. İlk dəfə EMP-001 kodu ilə aktivləşdirmə:
     async function activateAccount() {
         const employeeCode = document.getElementById('actEmpCode').value.trim();
         const username = document.getElementById('actUsername').value.trim();
@@ -280,10 +425,9 @@
             showAuthError('Zəhmət olmasa bütün xanaları doldurun!');
             return;
         }
-        await sendAuthRequest('/api/auth/activate', { employeeCode, username, password });
+        await sendAuthRequest('/api/auth/activate', {employeeCode, username, password});
     }
 
-    // 2. Mövcud hesabla Login:
     async function loginAccount() {
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -292,7 +436,7 @@
             showAuthError('Zəhmət olmasa istifadəçi adı və şifrəni daxil edin!');
             return;
         }
-        await sendAuthRequest('/api/auth/login', { username, password });
+        await sendAuthRequest('/api/auth/login', {username, password});
     }
 
     async function sendAuthRequest(url, payload) {
@@ -300,13 +444,17 @@
         try {
             const res = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
 
             const rawText = await res.text();
             let data = {};
-            try { data = rawText ? JSON.parse(rawText) : {}; } catch (e) { data = {}; }
+            try {
+                data = rawText ? JSON.parse(rawText) : {};
+            } catch (e) {
+                data = {};
+            }
 
             if (!res.ok) {
                 let errMsg = data.message || 'Məlumatlar yanlışdır!';
@@ -317,11 +465,9 @@
                 return;
             }
 
-            // 1 illik Token-i telefonun yaddaşına yazırıq:
             localStorage.setItem(TOKEN_KEY, data.token);
             localStorage.setItem(USER_INFO_KEY, data.fullName + ' (' + data.position + ')');
 
-            // Auth bölməsini gizlədib dərhal QR Scan edirik:
             document.getElementById('authSection').classList.add('hidden');
             document.getElementById('scanSection').classList.remove('hidden');
             performQrScan(null);
@@ -341,9 +487,12 @@
         const iconEl = document.getElementById('resultIcon');
         const textEl = document.getElementById('resultMessage');
         const timeEl = document.getElementById('resultTime');
+        const lateBox = document.getElementById('lateReasonBox');
+        const earlyBox = document.getElementById('earlyLeaveBox');
 
-        document.getElementById('lateReasonBox').classList.add('hidden');
-        document.getElementById('earlyLeaveBox').classList.add('hidden');
+        // Hansı qutunun açıq olduğunu yadda saxlayırıq ki, xəta olanda bağlanmasın:
+        const wasLateOpen = !lateBox.classList.contains('hidden');
+        const wasEarlyOpen = !earlyBox.classList.contains('hidden');
 
         try {
             const res = await fetch('/api/attendance/scan', {
@@ -357,22 +506,38 @@
 
             const rawText = await res.text();
             let data = {};
-            try { data = rawText ? JSON.parse(rawText) : {}; } catch (e) { data = {}; }
+            try {
+                data = rawText ? JSON.parse(rawText) : {};
+            } catch (e) {
+                data = {};
+            }
 
             if (res.status === 401 || (res.status === 403 && !data.error)) {
                 logoutDevice();
                 return;
             }
 
-            const nowStr = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+            const nowStr = new Date().toLocaleTimeString('az-AZ', {hour: '2-digit', minute: '2-digit'});
             timeEl.innerText = '🕒 Qeyd saatı: ' + nowStr;
 
+            // XƏTA BAŞ VERDİKDƏ: Açıq olan səbəb qutusunu GİZLƏTMİRİK!
             if (!res.ok) {
                 msgBox.className = 'status-box status-error';
                 iconEl.innerText = '❌';
                 textEl.innerText = data.message || 'Xəta baş verdi!';
+
+                if (wasLateOpen || (bodyPayload && !bodyPayload.forceEarlyCheckout)) {
+                    lateBox.classList.remove('hidden');
+                }
+                if (wasEarlyOpen || (bodyPayload && bodyPayload.forceEarlyCheckout)) {
+                    earlyBox.classList.remove('hidden');
+                }
                 return;
             }
+
+            // Sorğu uğurludursa əvvəlcə qutuları bağlayırıq, lazımdırsa aşağıda yenidən açılır:
+            lateBox.classList.add('hidden');
+            earlyBox.classList.add('hidden');
 
             if (data.employeeInfo) {
                 document.getElementById('employeeBadge').innerText = '👤 ' + data.employeeInfo;
@@ -380,19 +545,15 @@
 
             textEl.innerText = data.message;
 
-            // 30+ dəqiqə gecikibsə Səbəb Qutusunu aç:
             if (data.requiresLateReason) {
                 msgBox.className = 'status-box status-warning';
                 iconEl.innerText = '⏰';
-                document.getElementById('lateReasonBox').classList.remove('hidden');
-            }
-            // 10 dəqiqə içində təkrar oxudubsa Cooldown seçimini aç:
-            else if (data.requiresEarlyLeaveConfirmation) {
+                lateBox.classList.remove('hidden');
+            } else if (data.requiresEarlyLeaveConfirmation) {
                 msgBox.className = 'status-box status-warning';
                 iconEl.innerText = '👀';
-                document.getElementById('earlyLeaveBox').classList.remove('hidden');
-            }
-            else {
+                earlyBox.classList.remove('hidden');
+            } else {
                 msgBox.className = 'status-box status-success';
                 iconEl.innerText = '✅';
             }
@@ -404,7 +565,6 @@
         }
     }
 
-    // 4. Gecikmə və ya Erkən Çıxış səbəbini göndərmək:
     function submitReason(isEarlyLeave) {
         const reasonText = isEarlyLeave
             ? document.getElementById('earlyLeaveInput').value
@@ -429,8 +589,6 @@
         localStorage.removeItem(USER_INFO_KEY);
         location.reload();
     }
-
-
 </script>
 </body>
 </html>

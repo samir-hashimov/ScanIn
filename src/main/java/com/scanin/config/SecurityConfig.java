@@ -25,28 +25,28 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                // JWT istifadə etdiyimiz üçün serverdə Session saxlamırıq (STATELESS):
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Login endpoint-i və HTML/JS səhifələri hamıya açıqdır:
-                        .requestMatchers("/api/auth/**", "/", "/index.html","/tasks.html","/field.html", "/hr.html", "/static/**", "/*.js", "/*.css").permitAll()
-                        // 2. Swagger açıq olsun (test üçün):
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        // 3. Dinamik IP yeniləmə scripti öz gizli şifrəsi (secret) ilə işlədiyi üçün açıq buraxırıq:
-                        .requestMatchers("/api/hr/office-ip/update").permitAll()
-                        // 4. HR və Admin endpoint-lərinə YALNIZ HR və ADMIN girə bilər!
-                        .requestMatchers("/api/hr/**").hasAnyRole("HR", "ADMIN")
-                        // 5. QR Kod oxutma (/api/attendance/scan) üçün mütləq login olmuş (Token-li) işçi olmalıdır:
-                        .requestMatchers("/api/attendance/**").hasAnyRole("EMPLOYEE", "HR", "ADMIN")
                         .requestMatchers(
                                 "/",
+                                "/error",
                                 "/index.html",
-                                "/hr.html",
                                 "/tasks.html",
                                 "/field.html",
+                                "/hr.html",
+                                "/static/**",
+                                "/*.js",
+                                "/*.css",
                                 "/api/auth/**",
-                                "/api/1c/**"
+                                "/api/1c/**",      // <-- 1C qapısı ən yuxarıda!
+                                "/api/hr/office-ip/update",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
                         ).permitAll()
+                        // 2. Qorunan yollar:
+                        .requestMatchers("/api/hr/**").hasAnyRole("HR", "ADMIN")
+                        .requestMatchers("/api/attendance/**").hasAnyRole("EMPLOYEE", "HR", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

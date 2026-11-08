@@ -31,7 +31,7 @@ public class AttendanceService {
     private final OfficeIpService officeIpService;
     private final NotificationService notificationService;
     private final AttendanceMapper attendanceMapper;
-    private final UserRepository userRepository ;
+    private final UserRepository userRepository;
 
     // İşçi QR oxudanda çağırılan ƏSAS METOD
     @Transactional
@@ -77,7 +77,7 @@ public class AttendanceService {
         if (lateMinutes == 0) {
             arrivalStatus = ArrivalStatus.ON_TIME;
             if (isFirstOfDay) {
-                message = "🥇 Günün çempionu! Ofisin işıqlarını bu gün sən yandırdın, " + user.getFullName() + "! Kofe aparatı səni gözləyir.";
+                message = "🥇 Günün çempionu! Ofisin işıqlarını bu gün sən yandırdın, " + user.getFullName();
             } else {
                 message = "✅ Xoş gəldin, " + user.getFullName() + "! Tam vaxtında iş başındasan, uğurlu günlər!";
             }
@@ -128,7 +128,7 @@ public class AttendanceService {
     private ScanResponse handleExistingRecord(Attendance attendance, ScanActionRequest actionRequest, LocalDate today, LocalDateTime now) {
         User user = attendance.getUser();
 
-        // Hal 1: İşçi artıq bu gün çıxış edibsə və 3-cü dəfə oxudursa:
+        // Hal 1: İşçi artıq bu gün çıxış edibsə:
         if (attendance.getDepartureStatus() != DepartureStatus.WORKING) {
             return ScanResponse.builder()
                     .message("🏠 " + user.getFullName() + ", sən bu gün üçün artıq çıxış etmisən (Saat: " + attendance.getCheckOutTime().toLocalTime() + "). Sabah görüşənədək!")
@@ -140,20 +140,26 @@ public class AttendanceService {
                     .build();
         }
 
-        // Hal 2: İşçi 30+ dəq gecikib, bayaq giriş edib, indi isə ekrandakı xanaya Gecikmə Səbəbini yazıb göndərirsə:
-        if (attendance.getArrivalStatus() == ArrivalStatus.CRITICAL_LATE
-                && attendance.getLateReason() == null
-                && actionRequest != null
-                && actionRequest.getReason() != null
-                && !actionRequest.isForceEarlyCheckout()) {
+        // Hal 2: Əgər işçinin statusu CRITICAL_LATE-dirsə və hələ də gecikmə səbəbi YOXDURSA (refresh etsə belə bura düşəcək):
+        if (attendance.getArrivalStatus() == ArrivalStatus.CRITICAL_LATE && (attendance.getLateReason() == null || attendance.getLateReason().isBlank())) {
+            if (actionRequest == null || actionRequest.getReason() == null) {
+                return ScanResponse.builder()
+                        .message("⏰ " + user.getFullName() + ", gecikmə səbəbini hələ qeyd etməmisən! Zəhmət olmasa səbəbi yaz:")
+                        .employeeInfo(user.getFullName() + " (" + user.getPosition() + ")")
+                        .actionType("LATE_REASON_REQUIRED")
+                        .requiresLateReason(true)
+                        .scanTime(now)
+                        .arrivalStatus(attendance.getArrivalStatus())
+                        .departureStatus(attendance.getDepartureStatus())
+                        .build();
+            }
 
-            // YENİ VALİDASİYA: Boşluq və ya "a" yazıb keçə bilməsin!
             validateReasonText(actionRequest.getReason(), "Gecikmə səbəbi düzgün qeyd olunmayıb!");
 
             attendance.setLateReason(actionRequest.getReason().trim());
             attendanceRepository.save(attendance);
             return ScanResponse.builder()
-                    .message("📝 Gecikmə səbəbin qeydə alındı: \"" + actionRequest.getReason() + "\". Xoş işlər, " + user.getFullName() + "!")
+                    .message("📝 Gecikmə səbəbin qeydə alındı: \"" + attendance.getLateReason() + "\". Xoş işlər, " + user.getFullName() + "!")
                     .employeeInfo(user.getFullName() + " (" + user.getPosition() + ")")
                     .actionType("LATE_REASON_SAVED")
                     .scanTime(now)
@@ -162,16 +168,27 @@ public class AttendanceService {
                     .build();
         }
 
-        // Hal 3: Səhər gəlib və İLK 10 DƏQİQƏ İÇİNDƏ təkrar QR oxudub (Səhvən əli dəyib və ya təcili işi çıxıb)
+        // İşin bitmə saatını və girişdən keçən dəqiqəni hesablayırıq:
         long minutesSinceCheckIn = Duration.between(attendance.getCheckInTime(), now).toMinutes();
+        LocalTime shiftEnd = user.getShiftEndTime() != null ? user.getShiftEndTime() : LocalTime.of(18, 0);
+        boolean isBeforeShiftEnd = now.toLocalTime().isBefore(shiftEnd);
 
-        if (minutesSinceCheckIn < 10 && (actionRequest == null || !actionRequest.isForceEarlyCheckout())) {
-            long mins = Math.max(1, minutesSinceCheckIn);
+        // Hal 3: İlk 10 dəqiqə içində oxudub VƏ YA iş vaxtı hələ bitməyib (Tez çıxış cəhdi):
+        if ((minutesSinceCheckIn < 10 || isBeforeShiftEnd) && (actionRequest == null || !actionRequest.isForceEarlyCheckout())) {
+            String warningMsg;
+            if (minutesSinceCheckIn < 10) {
+                long mins = Math.max(1, minutesSinceCheckIn);
+                warningMsg = "👀 Dayan görüm, " + user.getFullName() + "! Cəmi " + mins + " dəqiqə əvvəl gəlmisən, hara gedirsən? Kreslon hələ isinməyib! Əgər doğrudan təcili işin çıxıbsa və gedirsənsə, səbəbini yaz:";
+            } else {
+                long minsLeft = Duration.between(now.toLocalTime(), shiftEnd).toMinutes();
+                warningMsg = "⏳ " + user.getFullName() + ", iş vaxtının bitməsinə hələ " + minsLeft + " dəqiqə qalıb (Bitmə saatı: " + shiftEnd + "). Tez çıxma səbəbini qeyd et:";
+            }
+
             return ScanResponse.builder()
-                    .message("👀 Dayan görüm, " + user.getFullName() + "! Cəmi " + mins + " dəqiqə əvvəl gəlmisən, hara gedirsən? Kreslon hələ isinməyib! Əgər doğrudan təcili işin çıxıbsa və gedirsənsə, səbəbini yaz:")
+                    .message(warningMsg)
                     .employeeInfo(user.getFullName() + " (" + user.getPosition() + ")")
                     .actionType("COOLDOWN_WARNING")
-                    .requiresEarlyLeaveConfirmation(true) // Ekranda seçim və səbəb xanasını açacaq!
+                    .requiresEarlyLeaveConfirmation(true)
                     .scanTime(now)
                     .arrivalStatus(attendance.getArrivalStatus())
                     .departureStatus(attendance.getDepartureStatus())
@@ -179,38 +196,31 @@ public class AttendanceService {
         }
 
         // Hal 4: Həqiqətən ÇIXIŞ (CHECK-OUT) edir:
-        attendance.setCheckOutTime(now);
+        if ((actionRequest != null && actionRequest.isForceEarlyCheckout()) || isBeforeShiftEnd) {
+            String reason = (actionRequest != null) ? actionRequest.getReason() : null;
+            validateReasonText(reason, "Erkən çıxış üçün səbəb yazmaq məcburidir!");
 
+            attendance.setDepartureStatus(DepartureStatus.EARLY_LEAVE);
+            attendance.setEarlyLeaveReason(reason.trim());
+        } else {
+            attendance.setDepartureStatus(DepartureStatus.COMPLETED);
+        }
+
+        attendance.setCheckOutTime(now);
         int totalWorked = (int) Duration.between(attendance.getCheckInTime(), now).toMinutes();
         attendance.setTotalWorkedMinutes(totalWorked);
 
-        // Əlavə işlədiyi dəqiqələrin (Overtime) hesablanması:
-        LocalTime shiftEnd = user.getShiftEndTime(); // Məs: 18:00
         if (now.toLocalTime().isAfter(shiftEnd)) {
             int overtime = (int) Duration.between(shiftEnd, now.toLocalTime()).toMinutes();
             attendance.setOvertimeMinutes(overtime);
         }
 
-        // Hal 4-ün içində: Əgər 10 dəq içində təcili səbəb yazıb tez çıxırsa:
-        if (actionRequest != null && actionRequest.isForceEarlyCheckout()) {
-            // YENİ VALİDASİYA: Təcili çıxırsa səbəb mütləq və ən azı 5 hərf olmalıdır!
-            validateReasonText(actionRequest.getReason(), "Erkən çıxış üçün səbəb yazmaq məcburidir!");
-
-            attendance.setDepartureStatus(DepartureStatus.EARLY_LEAVE);
-            attendance.setEarlyLeaveReason(actionRequest.getReason().trim());
-        } else {
-            attendance.setDepartureStatus(DepartureStatus.COMPLETED);
-        }
-
-        // Əvvəlcə yadda saxlayırıq ki, bu işçinin statusu WORKING-dən çıxsın:
         attendanceRepository.save(attendance);
 
-        // İndi yoxlayırıq: Ofisdə WORKING statusunda başqa kimsə qaldımı?
         long remainingWorkersInOffice = attendanceRepository.countByWorkDateAndDepartureStatus(today, DepartureStatus.WORKING);
 
         String checkoutMessage;
         if (remainingWorkersInOffice == 0) {
-            // Ofisdə heç kim qalmayıb -> ƏN SON ÇIXAN BUDUR!
             attendance.setLastToLeave(true);
             attendanceRepository.save(attendance);
             checkoutMessage = "🦸‍♂️ Ofisin gizli qəhrəmanı! Hamı getdi, son nöqtəni sən qoydun. Bizim üçün çəkdiyin bu qədər əziyyətə görə təşəkkürlər, " + user.getFullName() + "! İşıqları söndürməyi unutma, xoş istirahətlər! 🌙";
@@ -229,7 +239,6 @@ public class AttendanceService {
                 .departureStatus(attendance.getDepartureStatus())
                 .build();
     }
-
     // ==================== HR HESABAT METODU ====================
     @Transactional(readOnly = true)
     public List<AttendanceReportResponse> getDailyReport(LocalDate date) {
@@ -237,6 +246,7 @@ public class AttendanceService {
         List<Attendance> records = attendanceRepository.findAllByWorkDateOrderByCheckInTimeAsc(targetDate);
         return attendanceMapper.toReportResponseList(records);
     }
+
     // Köməkçi Validasiya Metodu: Səbəb yazılıbsa, boşluqdan və ya 1-2 hərfdən ibarət ola bilməz!
     private void validateReasonText(String reason, String errorMessage) {
         if (reason == null || reason.trim().length() < 5) {
