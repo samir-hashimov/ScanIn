@@ -1,5 +1,6 @@
 package com.scanin.controller;
 
+import com.scanin.dto.request.CompleteTaskRequest;
 import com.scanin.dto.request.CreateAdHocActivityRequest;
 import com.scanin.dto.request.CreateTaskRequest;
 import com.scanin.dto.response.TaskResponse;
@@ -32,9 +33,30 @@ public class TaskController {
     }
 
     // 3. İŞÇİ ÜÇÜN: Tapşırığı BİTİR:
-    @PostMapping("/tasks/{id}/complete")
-    public ResponseEntity<TaskResponse> completeTask(@PathVariable Long id, Authentication authentication) {
-        return ResponseEntity.ok(taskService.completeTask(id, authentication.getName()));
+    @PostMapping({"/tasks/{id}/complete", "/tasks/{id}/finish"})
+    public ResponseEntity<TaskResponse> completeTask(
+            @PathVariable Long id,
+            Authentication authentication,
+            @RequestParam(required = false) String comment,
+            @RequestParam(required = false) String completionComment,
+            @RequestBody(required = false) CompleteTaskRequest body) {
+        String note = firstNonBlank(
+                comment,
+                completionComment,
+                body != null ? body.getComment() : null,
+                body != null ? body.getCompletionComment() : null
+        );
+        return ResponseEntity.ok(taskService.completeTask(id, authentication.getName(), note));
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String v : values) {
+            if (v != null && !v.isBlank()) {
+                return v.trim();
+            }
+        }
+        return null;
     }
 
     @PostMapping("/tasks/{id}/pause")

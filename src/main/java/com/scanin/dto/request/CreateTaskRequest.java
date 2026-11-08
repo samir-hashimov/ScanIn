@@ -17,6 +17,10 @@ public class CreateTaskRequest {
 
     private String description;
 
+    private String assignedBy;
+
+    private String priority;
+
     @NotNull(message = "Son tarix (Deadline) mütləq göstərilməlidir!")
     private LocalDateTime deadline;
 

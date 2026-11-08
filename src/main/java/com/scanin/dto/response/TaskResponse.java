@@ -16,6 +16,9 @@ public class TaskResponse {
     private String employeePosition;
     private String title;
     private String description;
+    private String assignedBy;
+    private String priority;
+    private String completionComment;
     private LocalDateTime deadline;
     private TaskStatus status;
     private TaskKind kind;

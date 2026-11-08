@@ -7,6 +7,7 @@ import com.scanin.dao.repository.AttendanceRepository;
 import com.scanin.dao.repository.EmployeeTaskRepository;
 import com.scanin.dao.repository.UserRepository;
 import com.scanin.exception.ResourceNotFoundException;
+import com.scanin.service.TaskService;
 import com.scanin.util.Role;
 import com.scanin.util.TaskKind;
 import com.scanin.util.TaskStatus;
@@ -17,12 +18,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -82,6 +85,10 @@ public class OneCSyncController {
         task.setTitle(dto.getTitle());
         task.setDescription(dto.getDescription());
         task.setDeadline(dto.getDeadline() != null ? dto.getDeadline() : LocalDateTime.now().plusHours(4));
+        task.setAssignedBy(dto.getAssignedBy() != null && !dto.getAssignedBy().isBlank()
+                ? dto.getAssignedBy().trim()
+                : "HR / Müdiriyyət");
+        task.setPriority(normalizePriority(dto.getPriority()));
 
         taskRepository.save(task);
 
@@ -134,9 +141,19 @@ public class OneCSyncController {
                 Map<String, Object> tm = new HashMap<>();
                 tm.put("external1cId", t.getExternal1cId());
                 tm.put("status", t.getStatus().name()); // PENDING, IN_PROGRESS, COMPLETED
-                tm.put("spentMinutes", t.getSpentMinutes() != null ? t.getSpentMinutes() : 0);
+                int spent = liveSpentMinutes(t);
+                String completionComment = t.getCompletionComment() != null ? t.getCompletionComment() : "";
+                String commentSummary = "Sərf olunan vaxt: " + spent + " dəq.";
+                if (!completionComment.isBlank()) {
+                    commentSummary += " | Qeyd: " + completionComment;
+                }
+                tm.put("spentMinutes", spent);
                 tm.put("startedAt", t.getStartedAt() != null ? t.getStartedAt().withNano(0).toString() : "");
                 tm.put("completedAt", t.getCompletedAt() != null ? t.getCompletedAt().withNano(0).toString() : "");
+                tm.put("assignedBy", t.getAssignedBy() != null ? t.getAssignedBy() : "HR / Müdiriyyət");
+                tm.put("priority", normalizePriority(t.getPriority()));
+                tm.put("completionComment", completionComment);
+                tm.put("commentSummary", commentSummary);
                 taskList.add(tm);
             }
         }
@@ -191,6 +208,46 @@ public class OneCSyncController {
     }
 
 
+    /**
+     * 1C-dən gələn prioritet sözlərini ScanIn standartına çevirir:
+     * Yüksək / Yüksən / HIGH / Высокий -> HIGH
+     * Aşağı / LOW / Низкий -> LOW
+     * qalan hallar -> NORMAL
+     */
+    public static String normalizePriority(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "NORMAL";
+        }
+        String original = raw.trim();
+        String v = original.toLowerCase(Locale.ROOT)
+                .replace("ı", "i")
+                .replace("ə", "e")
+                .replace("ö", "o")
+                .replace("ü", "u")
+                .replace("ş", "s")
+                .replace("ç", "c")
+                .replace("ğ", "g");
+
+        if (v.equals("yuksek") || v.equals("yuksen") || v.equals("high")
+                || original.equalsIgnoreCase("Высокий") || v.equals("высокий")) {
+            return "HIGH";
+        }
+        if (v.equals("asagi") || v.equals("low")
+                || original.equalsIgnoreCase("Низкий") || v.equals("низкий")) {
+            return "LOW";
+        }
+        return "NORMAL";
+    }
+
+    private int liveSpentMinutes(EmployeeTask t) {
+        int spent = t.getSpentMinutes() != null ? t.getSpentMinutes() : 0;
+        if (t.getStatus() == TaskStatus.IN_PROGRESS && t.getLastResumedAt() != null) {
+            long add = Duration.between(t.getLastResumedAt(), LocalDateTime.now()).toMinutes();
+            spent += (int) Math.max(0, add);
+        }
+        return spent;
+    }
+
     // "000000001" -> "EMP-001" çeviricisi:
     private String normalizeCodeToJava(String rawCode) {
         if (rawCode == null) return "";
@@ -231,5 +288,7 @@ public class OneCSyncController {
         private String title;
         private String description;
         private LocalDateTime deadline;
+        private String assignedBy;
+        private String priority;
     }
 }

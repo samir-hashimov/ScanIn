@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +40,8 @@ public class TaskService {
                 task.setTitle(request.getTitle());
                 task.setDescription(request.getDescription());
                 task.setDeadline(request.getDeadline());
+                task.setAssignedBy(resolveAssignedBy(request.getAssignedBy()));
+                task.setPriority(normalizePriority(request.getPriority()));
                 return toResponse(taskRepository.save(task));
             }
         }
@@ -47,6 +51,8 @@ public class TaskService {
                 .title(request.getTitle().trim())
                 .description(request.getDescription())
                 .deadline(request.getDeadline())
+                .assignedBy(resolveAssignedBy(request.getAssignedBy()))
+                .priority(normalizePriority(request.getPriority()))
                 .external1cId(request.getExternal1cId())
                 .status(TaskStatus.PENDING)
                 .kind(TaskKind.ASSIGNED)
@@ -92,6 +98,10 @@ public class TaskService {
                 .startedAt(now)
                 .lastResumedAt(now)
                 .pausedFromTask(parent)
+                .assignedBy(user.getFullName() != null && !user.getFullName().isBlank()
+                        ? user.getFullName()
+                        : "Özüm / Fəaliyyət")
+                .priority("NORMAL")
                 .createdAt(now)
                 .build();
 
@@ -103,7 +113,7 @@ public class TaskService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("İstifadəçi tapılmadı!"));
 
-        return taskRepository.findAllByUserOrderByDeadlineAsc(user)
+        return sortForDisplay(taskRepository.findAllByUserOrderByDeadlineAsc(user))
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -161,6 +171,11 @@ public class TaskService {
 
     @Transactional
     public TaskResponse completeTask(Long taskId, String username) {
+        return completeTask(taskId, username, null);
+    }
+
+    @Transactional
+    public TaskResponse completeTask(Long taskId, String username, String completionComment) {
         EmployeeTask task = getOwnedTask(taskId, username);
 
         if (task.getStatus() == TaskStatus.COMPLETED) {
@@ -177,6 +192,10 @@ public class TaskService {
         task.setLastResumedAt(null);
         task.setStatus(TaskStatus.COMPLETED);
 
+        if (completionComment != null && !completionComment.isBlank()) {
+            task.setCompletionComment(completionComment.trim());
+        }
+
         int spent = task.getSpentMinutes() != null ? task.getSpentMinutes() : 0;
         task.setSpentMinutes(Math.max(1, spent));
 
@@ -185,7 +204,7 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public List<TaskResponse> getAllTasksForHr() {
-        return taskRepository.findAllByOrderByDeadlineAsc()
+        return sortForDisplay(taskRepository.findAllByOrderByDeadlineAsc())
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -262,6 +281,11 @@ public class TaskService {
                 .employeePosition(t.getUser().getPosition())
                 .title(t.getTitle())
                 .description(t.getDescription())
+                .assignedBy(t.getAssignedBy() != null && !t.getAssignedBy().isBlank()
+                        ? t.getAssignedBy()
+                        : "HR / Müdiriyyət")
+                .priority(normalizePriority(t.getPriority()))
+                .completionComment(t.getCompletionComment())
                 .deadline(t.getDeadline())
                 .status(t.getStatus())
                 .kind(t.getKind() != null ? t.getKind() : TaskKind.ASSIGNED)
@@ -275,5 +299,61 @@ public class TaskService {
                 .pausedFromTaskTitle(parentTitle)
                 .overdue(isOverdue)
                 .build();
+    }
+
+    private List<EmployeeTask> sortForDisplay(List<EmployeeTask> tasks) {
+        return tasks.stream()
+                .sorted(Comparator
+                        .comparing((EmployeeTask t) -> isOpenStatus(t.getStatus()) ? 0 : 1)
+                        .thenComparingInt(t -> isOpenStatus(t.getStatus()) ? priorityRank(t.getPriority()) : 9)
+                        .thenComparing(t -> t.getDeadline() != null ? t.getDeadline() : LocalDateTime.MAX)
+                        .thenComparing(t -> t.getId() != null ? t.getId() : 0L))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isOpenStatus(TaskStatus status) {
+        return status == TaskStatus.PENDING
+                || status == TaskStatus.IN_PROGRESS
+                || status == TaskStatus.PAUSED;
+    }
+
+    private int priorityRank(String priority) {
+        return switch (normalizePriority(priority)) {
+            case "HIGH" -> 0;
+            case "LOW" -> 2;
+            default -> 1;
+        };
+    }
+
+    private String resolveAssignedBy(String assignedBy) {
+        if (assignedBy == null || assignedBy.isBlank()) {
+            return "HR / Müdiriyyət";
+        }
+        return assignedBy.trim();
+    }
+
+    public static String normalizePriority(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "NORMAL";
+        }
+        String v = raw.trim().toLowerCase(Locale.ROOT)
+                .replace("ı", "i")
+                .replace("ə", "e")
+                .replace("ö", "o")
+                .replace("ü", "u")
+                .replace("ş", "s")
+                .replace("ç", "c")
+                .replace("ğ", "g");
+
+        if (v.equals("yuksek") || v.equals("yuksen") || v.equals("high") || v.equals("высокий")) {
+            return "HIGH";
+        }
+        if (v.equals("asagi") || v.equals("low") || v.equals("низкий")) {
+            return "LOW";
+        }
+        if (v.equals("normal") || v.equals("orta")) {
+            return "NORMAL";
+        }
+        return "NORMAL";
     }
 }

@@ -34,6 +34,17 @@ public class EmployeeTask {
     @Column(length = 1000)
     private String description;
 
+    @Column(name = "assigned_by", length = 255)
+    @Builder.Default
+    private String assignedBy = "HR / Müdiriyyət";
+
+    @Column(length = 50)
+    @Builder.Default
+    private String priority = "NORMAL";
+
+    @Column(name = "completion_comment", columnDefinition = "TEXT")
+    private String completionComment;
+
     @Column(nullable = false)
     private LocalDateTime deadline;
 

@@ -442,6 +442,128 @@
         .hidden {
             display: none !important;
         }
+
+        .analytics-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .analytics-card {
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px 14px;
+        }
+
+        .analytics-label {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+
+        .analytics-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+
+        .progress-track {
+            margin-top: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.18);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #22c55e, #38bdf8);
+            transition: width 0.35s ease;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(15, 23, 42, 0.65);
+            color: #cbd5e1;
+            border-radius: 999px;
+            padding: 7px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .chip.active {
+            background: rgba(56, 189, 248, 0.18);
+            border-color: rgba(56, 189, 248, 0.55);
+            color: #7dd3fc;
+        }
+
+        .b-prio-high {
+            background: rgba(239, 68, 68, 0.22);
+            color: #fca5a5;
+        }
+
+        .b-prio-normal {
+            background: rgba(56, 189, 248, 0.2);
+            color: #7dd3fc;
+        }
+
+        .b-prio-low {
+            background: rgba(148, 163, 184, 0.2);
+            color: #cbd5e1;
+        }
+
+        .b-urgent {
+            background: rgba(249, 115, 22, 0.22);
+            color: #fdba74;
+        }
+
+        .assign-line, .note-line {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+
+        .note-line {
+            color: #cbd5e1;
+        }
+
+        @keyframes urgentPulse {
+            0%, 100% {
+                border-color: rgba(239, 68, 68, 0.75);
+                box-shadow: 0 0 10px rgba(249, 115, 22, 0.28);
+            }
+            50% {
+                border-color: rgba(251, 146, 60, 1);
+                box-shadow: 0 0 22px rgba(239, 68, 68, 0.55);
+            }
+        }
+
+        .task-card.urgent-glow {
+            animation: urgentPulse 1.5s ease-in-out infinite;
+        }
+
+        .finish-note {
+            text-align: left;
+            margin-bottom: 14px;
+        }
     </style>
 </head>
 <body>
@@ -473,6 +595,33 @@
         </div>
     </div>
 
+    <div class="analytics-row">
+        <div class="analytics-card">
+            <div class="analytics-label">🕒 Bu gün işlədiyi ümumi vaxt</div>
+            <div class="analytics-value" id="todayWorked">0 saat 0 dəq</div>
+        </div>
+        <div class="analytics-card">
+            <div class="analytics-label">📊 Tapşırıqların İcra Faizi (Progress Bar)</div>
+            <div class="analytics-value" id="progressLabel">0% Tamamlanıb (0/0)</div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="chip-row" id="filterRow">
+            <button type="button" class="chip active" data-filter="all" onclick="setTaskFilter('all')">Hamısı</button>
+            <button type="button" class="chip" data-filter="open" onclick="setTaskFilter('open')">Yalnız Edilməmişlər</button>
+            <button type="button" class="chip" data-filter="high" onclick="setTaskFilter('high')">Yüksək Prioritetli</button>
+        </div>
+        <div class="chip-row" id="sortRow">
+            <button type="button" class="chip active" data-sort="priorityDeadline" onclick="setTaskSort('priorityDeadline')">Prioritet + Deadline (Default)</button>
+            <button type="button" class="chip" data-sort="deadline" onclick="setTaskSort('deadline')">Yalnız Deadline-a görə</button>
+            <button type="button" class="chip" data-sort="priority" onclick="setTaskSort('priority')">Yalnız Prioritetə görə</button>
+        </div>
+    </div>
+
     <div id="tasksList" class="task-list">
         <div style="text-align:center; color:#94a3b8; padding:24px;">Yüklənir...</div>
     </div>
@@ -485,9 +634,13 @@
         <h3>Əla gedirsən!</h3>
         <p id="sweetModalText">Bu tapşırığı tam bitirdiyindən əminsən? Bəlkə kiçik bir detal yaddan çıxıb, bir də göz
             gəzdirmək istəyərsən? 😊</p>
+        <div class="finish-note">
+            <label class="field-label" for="finishComment">Yekun qeydiniz (məcburi deyil)</label>
+            <input class="modal-input" id="finishComment" maxlength="2000" placeholder="Sənədlər yoxlanıldı">
+        </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="closeSweetModal()">🔍 Bir də baxım</button>
-            <button class="btn-confirm" onclick="confirmFinishTask()">✅ Tam əminəm, bitdi!</button>
+            <button class="btn-confirm" onclick="confirmFinishTask()">Təsdiqlə &amp; Bitir</button>
         </div>
     </div>
 </div>
@@ -519,12 +672,14 @@
 <script>
     const TOKEN_KEY = 'scanin_jwt_token';
     const USER_INFO_KEY = 'scanin_user_info';
-    const STATUS_ORDER = {IN_PROGRESS: 0, PAUSED: 1, PENDING: 2, COMPLETED: 3};
     let selectedTaskIdForFinish = null;
     let pauseSourceTaskId = null;
     let openAccordionId = null;
+    let sourceTasks = [];
     let cachedTasks = [];
     let timerHandle = null;
+    let taskFilter = 'all';
+    let taskSort = 'priorityDeadline';
 
     window.onload = () => {
         const token = localStorage.getItem(TOKEN_KEY);
@@ -569,8 +724,111 @@
             return;
         }
 
-        const tasks = await res.json();
-        renderTasks(tasks);
+        sourceTasks = await res.json();
+        renderTasks();
+    }
+
+    function setTaskFilter(mode) {
+        taskFilter = mode;
+        document.querySelectorAll('#filterRow .chip').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === mode);
+        });
+        renderTasks();
+    }
+
+    function setTaskSort(mode) {
+        taskSort = mode;
+        document.querySelectorAll('#sortRow .chip').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.sort === mode);
+        });
+        renderTasks();
+    }
+
+    function isOpenTask(t) {
+        return t.status === 'PENDING' || t.status === 'IN_PROGRESS' || t.status === 'PAUSED';
+    }
+
+    function priorityRank(priority) {
+        const p = (priority || 'NORMAL').toUpperCase();
+        if (p === 'HIGH') return 0;
+        if (p === 'LOW') return 2;
+        return 1;
+    }
+
+    function deadlineTs(t) {
+        return t.deadline ? new Date(t.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+    }
+
+    function dateKey(dtStr) {
+        if (!dtStr) return '';
+        const d = new Date(dtStr);
+        if (Number.isNaN(d.getTime())) return String(dtStr).substring(0, 10);
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function isUrgent(t) {
+        if (!t || t.status === 'COMPLETED') return false;
+        if ((t.priority || '').toUpperCase() === 'HIGH') return true;
+        if (!t.deadline) return false;
+        return new Date(t.deadline).getTime() - Date.now() <= 2 * 60 * 60 * 1000;
+    }
+
+    function priorityBadge(priority) {
+        const p = (priority || 'NORMAL').toUpperCase();
+        if (p === 'HIGH') return '<span class="badge b-prio-high">🔥 Yüksək</span>';
+        if (p === 'LOW') return '<span class="badge b-prio-low">🔽 Aşağı</span>';
+        return '<span class="badge b-prio-normal">⚡ Normal</span>';
+    }
+
+    function sortVisible(list) {
+        return list.slice().sort((a, b) => {
+            const openDiff = (isOpenTask(a) ? 0 : 1) - (isOpenTask(b) ? 0 : 1);
+            if (openDiff !== 0) return openDiff;
+            if (taskSort === 'deadline') return deadlineTs(a) - deadlineTs(b);
+            const pr = priorityRank(a.priority) - priorityRank(b.priority);
+            if (taskSort === 'priority') return pr || (a.id || 0) - (b.id || 0);
+            return pr || deadlineTs(a) - deadlineTs(b);
+        });
+    }
+
+    function applyTaskFilter(list) {
+        if (taskFilter === 'open') return list.filter(isOpenTask);
+        if (taskFilter === 'high') return list.filter(t => (t.priority || '').toUpperCase() === 'HIGH');
+        return list;
+    }
+
+    function todayWorkedSeconds(tasks) {
+        const today = dateKey(new Date().toISOString());
+        let sec = 0;
+        tasks.forEach(t => {
+            if (t.status === 'COMPLETED' && dateKey(t.completedAt) === today) {
+                sec += (t.spentMinutes || 0) * 60;
+            } else if (t.status === 'IN_PROGRESS') {
+                sec += liveSeconds(t);
+            }
+        });
+        return sec;
+    }
+
+    function formatHoursMinutes(totalSeconds) {
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        return `${h} saat ${m} dəq`;
+    }
+
+    function updateAnalytics(tasks) {
+        const todayEl = document.getElementById('todayWorked');
+        if (todayEl) todayEl.textContent = formatHoursMinutes(todayWorkedSeconds(tasks));
+
+        const real = tasks.filter(t => t.kind !== 'ADHOC');
+        const done = real.filter(t => t.status === 'COMPLETED').length;
+        const total = real.length;
+        const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+        const label = document.getElementById('progressLabel');
+        const fill = document.getElementById('progressFill');
+        if (label) label.textContent = `${pct}% Tamamlanıb (${done}/${total})`;
+        if (fill) fill.style.width = pct + '%';
     }
 
     function prepareLiveFields(tasks) {
@@ -610,14 +868,10 @@
             .replace(/'/g, '&#39;');
     }
 
-    function renderTasks(tasks) {
-        cachedTasks = tasks.slice().sort((a, b) => {
-            const sa = STATUS_ORDER[a.status] ?? 9;
-            const sb = STATUS_ORDER[b.status] ?? 9;
-            if (sa !== sb) return sa - sb;
-            return (a.id || 0) - (b.id || 0);
-        });
+    function renderTasks() {
+        cachedTasks = sourceTasks.map(t => ({...t}));
         prepareLiveFields(cachedTasks);
+        updateAnalytics(cachedTasks);
 
         const listEl = document.getElementById('tasksList');
         listEl.innerHTML = '';
@@ -635,6 +889,8 @@
         document.getElementById('cntPaused').innerText = paused;
         document.getElementById('cntDone').innerText = done;
 
+        const visible = sortVisible(applyTaskFilter(cachedTasks));
+
         if (cachedTasks.length === 0) {
             listEl.innerHTML = `<div style="text-align:center; padding:30px 15px; color:#94a3b8;">
                 🎉 Hazırda aktiv tapşırığınız yoxdur! Rahat nəfəs ala bilərsiniz.
@@ -642,16 +898,28 @@
             return;
         }
 
-        cachedTasks.forEach((t, idx) => {
+        if (visible.length === 0) {
+            listEl.innerHTML = `<div style="text-align:center; padding:30px 15px; color:#94a3b8;">
+                Bu filtrə uyğun tapşırıq yoxdur.
+            </div>`;
+            startLiveTicker();
+            return;
+        }
+
+        visible.forEach((t, idx) => {
             const isOpen = (openAccordionId === t.id) ? 'open' : '';
             const isAdhoc = t.kind === 'ADHOC';
             let cardState = '';
+            const urgent = isUrgent(t);
             if (t.status === 'IN_PROGRESS') cardState = 'active-work';
             else if (t.status === 'PAUSED') cardState = 'paused-work';
             else if (t.status === 'COMPLETED') cardState = 'done-work';
             if (isAdhoc) cardState += ' adhoc-work';
+            if (urgent) cardState += ' urgent-glow';
 
             let badgeHtml = '';
+            if (urgent) badgeHtml += `<span class="badge b-urgent">🔥 Təcili</span>`;
+            badgeHtml += priorityBadge(t.priority);
             if (isAdhoc) badgeHtml += `<span class="badge b-adhoc">⚡ Fəaliyyət</span>`;
             if (t.status === 'PENDING') badgeHtml += `<span class="badge b-pending">⏳ Gözləyir</span>`;
             else if (t.status === 'IN_PROGRESS') badgeHtml += `<span class="badge b-progress">🔥 İcradadır</span>`;
@@ -689,6 +957,10 @@
                 actionBtnHtml = `<div style="text-align:center; color:#4ade80; font-size:13px; font-weight:600; padding:6px;">🎉 Tamamlandı. Sərf olunan vaxt: ${t.spentMinutes} dəqiqə</div>`;
             }
 
+            const assignedBy = t.assignedBy && t.assignedBy.trim() ? t.assignedBy : 'HR / Müdiriyyət';
+            const commentLine = t.completionComment
+                ? `<div class="note-line">💬 Qeyd: ${escapeHtml(t.completionComment)}</div>`
+                : '';
             const parentNote = t.pausedFromTaskTitle
                 ? `<p style="font-size:12px; color:#c084fc; margin-bottom:10px;">Bu fəaliyyət «${escapeHtml(t.pausedFromTaskTitle)}» tapşırığının fasiləsində yazılıb.</p>`
                 : '';
@@ -701,10 +973,12 @@
                     <div class="task-summary" onclick="toggleTask(${t.id})">
                         <div class="task-left">
                             <div class="task-title">${idx + 1}. ${escapeHtml(t.title)}</div>
+                            <div class="assign-line">👤 Verən: ${escapeHtml(assignedBy)}</div>
                             <div class="task-meta">
                                 <span>⏰ Son vaxt: <b style="color:${t.overdue ? '#f87171' : '#e2e8f0'}">${deadlineStr}</b></span>
                                 ${t.overdue ? '<span class="badge b-overdue">⚠️ Vaxtı keçib</span>' : ''}
                             </div>
+                            ${commentLine}
                         </div>
                         <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">${badgeHtml}</div>
                     </div>
@@ -736,6 +1010,7 @@
                 const task = cachedTasks.find(x => x.id === id);
                 if (task) el.textContent = formatClock(liveSeconds(task));
             });
+            updateAnalytics(cachedTasks);
         }, 1000);
     }
 
@@ -833,6 +1108,7 @@
     function openSweetModal(e, id) {
         e.stopPropagation();
         selectedTaskIdForFinish = id;
+        document.getElementById('finishComment').value = '';
         document.getElementById('sweetModalText').innerHTML =
             `<b>"${escapeHtml(taskTitle(id))}"</b> işini tam bitirdiyindən əminsən? Vaxt yalnız işlədiyin seqmentlərə görə (fasilələr çıxılmaqla) yazılacaq.`;
         document.getElementById('sweetModal').classList.remove('hidden');
@@ -845,7 +1121,14 @@
 
     async function confirmFinishTask() {
         if (!selectedTaskIdForFinish) return;
-        const data = await apiPost(`/api/tasks/${selectedTaskIdForFinish}/complete`);
+        const comment = document.getElementById('finishComment').value.trim();
+        const body = {};
+        if (comment) {
+            body.comment = comment;
+            body.completionComment = comment;
+        }
+        const id = selectedTaskIdForFinish;
+        const data = await apiPost(`/api/tasks/${id}/complete`, body);
         closeSweetModal();
         if (data) loadMyTasks();
     }
