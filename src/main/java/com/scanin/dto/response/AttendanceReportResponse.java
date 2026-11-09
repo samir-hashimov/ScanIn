@@ -4,6 +4,7 @@ import com.scanin.util.ArrivalStatus;
 import com.scanin.util.DepartureStatus;
 import lombok.Builder;
 import lombok.Data;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -30,4 +31,8 @@ public class AttendanceReportResponse {
     private boolean fieldVisit;
     private String counterpartyName;
     private String approvalStatus;
+    private Double latitude;
+    private Double longitude;
+    private boolean external;
+    private String locationNote;
 }

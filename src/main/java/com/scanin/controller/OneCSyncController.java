@@ -7,7 +7,6 @@ import com.scanin.dao.repository.AttendanceRepository;
 import com.scanin.dao.repository.EmployeeTaskRepository;
 import com.scanin.dao.repository.UserRepository;
 import com.scanin.exception.ResourceNotFoundException;
-import com.scanin.service.TaskService;
 import com.scanin.util.Role;
 import com.scanin.util.TaskKind;
 import com.scanin.util.TaskStatus;
@@ -22,11 +21,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/1c")
@@ -121,8 +116,15 @@ public class OneCSyncController {
             map.put("checkOutTime", a.getCheckOutTime() != null ? a.getCheckOutTime().withNano(0).toString() : "");
 
             String comment = "";
-            if (a.isFieldVisit()) {
-                comment += "[Kontragent: " + a.getCounterpartyName() + " | HR: " + a.getApprovalStatus() + "] ";
+            if (a.isFieldVisit() || a.isExternal()) {
+                comment += "[Kənardan";
+                if (a.getCounterpartyName() != null && !a.getCounterpartyName().isBlank()) {
+                    comment += ": " + a.getCounterpartyName();
+                }
+                if (a.getLatitude() != null && a.getLongitude() != null) {
+                    comment += " | GPS: " + a.getLatitude() + "," + a.getLongitude();
+                }
+                comment += "] ";
             }
             if (a.getLateReason() != null && !a.getLateReason().isBlank()) {
                 comment += "Gecikmə: " + a.getLateReason() + " ";

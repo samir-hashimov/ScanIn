@@ -1,5 +1,6 @@
 package com.scanin.controller;
 
+import com.scanin.dto.request.FieldVisitRequest;
 import com.scanin.dto.request.ScanActionRequest;
 import com.scanin.dto.response.ScanResponse;
 import com.scanin.service.AttendanceService;
@@ -62,16 +63,17 @@ public class AttendanceController {
     @PostMapping("/field-visit")
     public ResponseEntity<ScanResponse> recordFieldVisit(
             Authentication authentication,
-            @Valid @RequestBody com.scanin.dto.request.FieldVisitRequest request) {
+            @Valid @RequestBody(required = false) FieldVisitRequest request) {
         return ResponseEntity.ok(attendanceService.recordFieldVisit(authentication.getName(), request));
     }
 
     @PostMapping("/attendance/{id}/verify")
     public ResponseEntity<Map<String, String>> verifyFieldVisit(
             @PathVariable Long id,
-            @RequestParam boolean approved) {
-        attendanceService.verifyFieldVisit(id, approved);
-        String msg = approved ? "Kontragent səfəri təsdiqləndi!" : "Kontragent səfəri rədd edildi!";
-        return ResponseEntity.ok(Map.of("message", msg));
+            @RequestParam(required = false) Boolean approved) {
+        attendanceService.verifyFieldVisit(id, Boolean.TRUE.equals(approved));
+        return ResponseEntity.ok(Map.of(
+                "message", "Kənardan giriş birbaşa qeydə alınır. HR təsdiqi tələb olunmur."
+        ));
     }
 }

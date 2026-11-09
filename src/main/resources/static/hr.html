@@ -332,6 +332,68 @@
             color: #38bdf8;
         }
 
+        .loc-office {
+            background: rgba(34, 197, 94, 0.18);
+            color: #86efac;
+            border: 1px solid rgba(34, 197, 94, 0.45);
+        }
+
+        .loc-external {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(245, 158, 11, 0.22));
+            color: #fde68a;
+            border: 1px solid rgba(251, 191, 36, 0.55);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .loc-external:hover {
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
+        }
+
+        .loc-sub {
+            display: block;
+            margin-top: 6px;
+            color: #93c5fd;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .loc-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.62);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 40;
+        }
+
+        .loc-card {
+            width: min(420px, 100%);
+            background: rgba(15, 23, 42, 0.94);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(16px);
+        }
+
+        .loc-card h4 {
+            margin-bottom: 8px;
+        }
+
+        .loc-card p {
+            color: #cbd5e1;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .loc-card a {
+            color: #7dd3fc;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -504,6 +566,7 @@
                 <tr>
                     <th>Kod</th>
                     <th>Ad Soyad & Vəzifə</th>
+                    <th>Məkan</th>
                     <th>Giriş Saatı</th>
                     <th>Giriş Statusu</th>
                     <th>Çıxış Saatı</th>
@@ -515,7 +578,7 @@
                 </thead>
                 <tbody id="reportTableBody">
                 <tr>
-                    <td colspan="9" style="text-align:center; color:#94a3b8;">Məlumat yüklənir...</td>
+                    <td colspan="10" style="text-align:center; color:#94a3b8;">Məlumat yüklənir...</td>
                 </tr>
                 </tbody>
             </table>
@@ -816,7 +879,7 @@
         document.getElementById('statLastLeave').innerText = '—';
 
         if (list.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#94a3b8;">Bu tarixdə hələ heç kim giriş etməyib.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#94a3b8;">Bu tarixdə hələ heç kim giriş etməyib.</td></tr>';
             if (cachedHrTasks.length) renderHrActivity();
             return;
         }
@@ -846,32 +909,25 @@
                 item.earlyLeaveReason ? `Tez çıxış: ${item.earlyLeaveReason}` : '',
                 item.systemNote || ''].filter(Boolean).join(' | ');
 
-            let fieldHtml = '';
-            if (item.fieldVisit) {
-                if (item.approvalStatus === 'PENDING') {
-                    fieldHtml = `<div style="margin-top:6px; padding:6px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; border-radius:6px;">
-                        <b style="color:#fbbf24;">🏢 Kontragent: ${item.counterpartyName}</b><br>
-                        <button onclick="verifyField(${item.attendanceId}, true)" style="margin-top:4px; padding:4px 8px; background:#22c55e; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">✅ Təsdiqlə</button>
-                        <button onclick="verifyField(${item.attendanceId}, false)" style="margin-top:4px; padding:4px 8px; background:#ef4444; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">❌ Rədd et</button>
-                    </div>`;
-                } else if (item.approvalStatus === 'APPROVED') {
-                    fieldHtml = `<br><span class="badge bg-green">🏢 ${item.counterpartyName} (HR Təsdiqlədi ✅)</span>`;
-                } else if (item.approvalStatus === 'REJECTED') {
-                    fieldHtml = `<br><span class="badge bg-red">🏢 ${item.counterpartyName} (Rədd Edildi ❌)</span>`;
-                }
-            }
+            const placeLine = item.counterpartyName
+                ? `<span class="loc-sub">${esc(item.counterpartyName)}</span>`
+                : '';
+            const noteLine = item.locationNote
+                ? `<span class="loc-sub">${esc(item.locationNote)}</span>`
+                : '';
 
             tbody.innerHTML += `
                 <tr>
                     <td><b>${item.employeeCode}</b></td>
                     <td><b>${item.fullName}</b> ${item.firstToArrive ? '🥇' : ''} ${item.lastToLeave ? '🌙' : ''}<br><span style="color:#94a3b8; font-size:12px;">${item.position}</span></td>
+                    <td>${locationBadge(item)}${placeLine}${noteLine}</td>
                     <td>${inTime}</td>
                     <td><span class="badge ${getArrivalBadge(item.arrivalStatus)}">${item.arrivalStatus}</span></td>
                     <td>${outTime}</td>
                     <td><span class="badge ${getDepartureBadge(item.departureStatus)}">${item.departureStatus}</span></td>
                     <td><span style="color:#f87171;">-${item.lateMinutes} dəq</span> / <span style="color:#4ade80;">+${item.overtimeMinutes} dəq</span></td>
                     <td><b>${hrs} saat ${mins} dəq</b></td>
-                    <td style="max-width:260px; color:#cbd5e1;">${notes || '—'} ${fieldHtml}</td>
+                    <td style="max-width:260px; color:#cbd5e1;">${notes || '—'}</td>
                 </tr>
             `;
         });
@@ -882,13 +938,59 @@
         if (cachedHrTasks.length) renderHrActivity();
     }
 
-    async function verifyField(attendanceId, approved) {
-        const token = localStorage.getItem(HR_TOKEN_KEY);
-        await fetch(`/api/hr/attendance/${attendanceId}/verify?approved=${approved}`, {
-            method: 'POST',
-            headers: {'Authorization': 'Bearer ' + token}
+    function locationBadge(item) {
+        const external = item.external === true || item.fieldVisit === true;
+        if (!external) {
+            return '<span class="badge loc-office" title="Əsas ofis">🏢 Ofisdən</span>';
+        }
+        const hasGps = item.latitude !== null && item.latitude !== undefined
+            && item.longitude !== null && item.longitude !== undefined;
+        const gps = hasGps
+            ? `${Number(item.latitude).toFixed(5)}, ${Number(item.longitude).toFixed(5)}`
+            : 'GPS koordinatı yoxdur';
+        const tip = [gps, item.counterpartyName, item.locationNote].filter(Boolean).join(' · ');
+        const id = item.attendanceId;
+        window.__scaninLocations = window.__scaninLocations || {};
+        window.__scaninLocations[id] = {
+            name: item.fullName || '',
+            gps,
+            hasGps,
+            latitude: item.latitude,
+            longitude: item.longitude,
+            place: item.counterpartyName || '',
+            note: item.locationNote || ''
+        };
+        return `<button type="button" class="badge loc-external" title="${esc(tip)}" onclick="openLocationCard(${id})">📍 Kənardan / Səfərdən</button>`;
+    }
+
+    function openLocationCard(attendanceId) {
+        const data = (window.__scaninLocations || {})[attendanceId];
+        if (!data) return;
+        const existing = document.getElementById('locationModal');
+        if (existing) existing.remove();
+
+        const mapLink = data.hasGps
+            ? `<p><a href="https://www.google.com/maps?q=${encodeURIComponent(data.latitude + ',' + data.longitude)}" target="_blank" rel="noopener">Xəritədə aç</a></p>`
+            : '<p>Bu qeyd lokasiya icazəsi olmadan yazıldığı üçün koordinat yoxdur.</p>';
+        const place = data.place ? `<p><b>Yer:</b> ${esc(data.place)}</p>` : '';
+        const note = data.note ? `<p><b>Qeyd:</b> ${esc(data.note)}</p>` : '';
+
+        const modal = document.createElement('div');
+        modal.id = 'locationModal';
+        modal.className = 'loc-modal';
+        modal.innerHTML = `
+            <div class="loc-card">
+                <h4>📍 ${esc(data.name)}</h4>
+                <p><b>Koordinat:</b> ${esc(data.gps)}</p>
+                ${place}
+                ${note}
+                ${mapLink}
+                <button class="btn btn-blue" type="button" onclick="document.getElementById('locationModal').remove()">Bağla</button>
+            </div>`;
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) modal.remove();
         });
-        loadDailyReport();
+        document.body.appendChild(modal);
     }
 
     function esc(value) {

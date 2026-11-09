@@ -5,13 +5,14 @@ import com.scanin.util.ArrivalStatus;
 import com.scanin.util.DepartureStatus;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(
-    name = "attendances",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "work_date"})
+        name = "attendances",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "work_date"})
 )
 @Getter
 @Setter
@@ -80,4 +81,17 @@ public class Attendance {
     @Column(name = "approval_status", length = 20)
     @Builder.Default
     private ApprovalStatus approvalStatus = ApprovalStatus.NOT_REQUIRED;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    @Column(name = "is_external", nullable = false)
+    @Builder.Default
+    private boolean external = false;
+
+    @Column(name = "location_note", length = 500)
+    private String locationNote;
 }

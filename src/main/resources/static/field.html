@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScanIn — Kontragent (Səfər) Paneli</title>
+    <title>ScanIn — Kənardan Giriş</title>
     <style>
         * {
             box-sizing: border-box;
@@ -136,6 +136,29 @@
             color: #fecaca;
         }
 
+        .status-warn {
+            background: rgba(245, 158, 11, 0.14);
+            border: 1px solid rgba(245, 158, 11, 0.7);
+            color: #fde68a;
+        }
+
+        .gps-hint {
+            margin: 0 0 16px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.28);
+            color: #bae6fd;
+            font-size: 12.5px;
+            line-height: 1.45;
+            text-align: left;
+        }
+
+        .btn:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -152,9 +175,9 @@
 <body>
 
 <div class="card">
-    <div class="brand-icon">🤝</div>
-    <h1>Kontragent Səfər Paneli</h1>
-    <p class="subtitle">Ofisdən kənarda (müştəri yanında) giriş-çıxış qeydiyyatı</p>
+    <div class="brand-icon">📍</div>
+    <h1>Kənardan Giriş</h1>
+    <p class="subtitle">Səfərdə və ya ofisdən kənarda giriş-çıxış birbaşa qeydə alınır. HR təsdiqi gözlənilmir.</p>
 
     <div id="empBadge" class="emp-badge hidden">👤 İşçi</div>
     <div id="alertBox" class="status-box hidden"></div>
@@ -172,17 +195,18 @@
         <button class="btn btn-amber" onclick="doLogin()">Daxil Ol</button>
     </div>
 
-    <!-- Əsas Kontragent Formu -->
+    <!-- Əsas kənardan giriş formu -->
     <div id="fieldForm" class="hidden">
+        <p class="gps-hint">Giriş və ya çıxış zamanı brauzer cari GPS koordinatını istəyəcək. İcazə verməsəniz belə əməliyyat bloklanmır — kənardan giriş kimi yazılır.</p>
         <div class="form-group">
-            <label>🏢 Hansı Kontragentin (Müştərinin) yanındasınız?</label>
+            <label>🏢 Haradasınız? (kontragent / ünvan, ixtiyari)</label>
             <input type="text" id="counterpartyName" placeholder="Məs: Veyseloglu MMC / Bravo">
         </div>
         <div class="form-group">
-            <label>📝 Görülən iş və ya qeyd (ixtiyari):</label>
+            <label>📝 Qeyd (ixtiyari)</label>
             <textarea id="visitNote" rows="2" placeholder="Məs: Müqavilə imzalanması və akt təhvili"></textarea>
         </div>
-        <button class="btn btn-amber" onclick="submitFieldVisit()">📍 Giriş / Çıxışı Təsdiqlə (HR-a Göndər)</button>
+        <button class="btn btn-amber" id="submitBtn" onclick="submitFieldVisit()">📍 Giriş / Çıxışı Qeydə Al</button>
     </div>
 
     <a href="/index.html" class="link">⬅️ Əsas Ofis QR Səhifəsinə Qayıt</a>
@@ -207,11 +231,35 @@
         }
     };
 
-    function showAlert(msg, isError) {
+    function showAlert(msg, kind) {
         const box = document.getElementById('alertBox');
-        box.className = 'status-box ' + (isError ? 'status-error' : 'status-success');
+        const tone = kind === 'error' ? 'status-error' : (kind === 'warn' ? 'status-warn' : 'status-success');
+        box.className = 'status-box ' + tone;
         box.innerText = msg;
         box.classList.remove('hidden');
+    }
+
+    function captureLocation() {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                resolve({coords: null, warning: 'Brauzer lokasiyanı dəstəkləmir. Giriş koordinatsız, kənardan kimi qeydə alınacaq.'});
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => resolve({
+                    coords: {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude
+                    },
+                    warning: null
+                }),
+                () => resolve({
+                    coords: null,
+                    warning: 'Lokasiya icazəsi alınmadı. Əməliyyat dayanmır — kənardan giriş kimi qeydə alınır.'
+                }),
+                {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000}
+            );
+        });
     }
 
     async function doLogin() {
@@ -224,7 +272,7 @@
         });
         const data = await res.json();
         if (!res.ok) {
-            showAlert(data.message || 'Giriş xətası!', true);
+            showAlert(data.message || 'Giriş xətası!', 'error');
             return;
         }
         localStorage.setItem(TOKEN_KEY, data.token);
@@ -235,24 +283,46 @@
     async function submitFieldVisit() {
         const counterpartyName = document.getElementById('counterpartyName').value.trim();
         const note = document.getElementById('visitNote').value.trim();
-        if (!counterpartyName) {
-            showAlert('Zəhmət olmasa Kontragentin adını daxil edin!', true);
-            return;
-        }
-
         const token = localStorage.getItem(TOKEN_KEY);
-        const res = await fetch('/api/attendance/field-visit', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
-            body: JSON.stringify({counterpartyName, note})
-        });
+        const button = document.getElementById('submitBtn');
 
-        const data = await res.json();
-        if (!res.ok) {
-            showAlert(data.message || 'Xəta baş verdi!', true);
-            return;
+        button.disabled = true;
+        button.innerText = '📍 Lokasiya oxunur...';
+
+        try {
+            const location = await captureLocation();
+            if (location.warning) {
+                showAlert(location.warning, 'warn');
+            }
+
+            const body = {counterpartyName, note, locationNote: note};
+            if (location.coords) {
+                body.latitude = location.coords.latitude;
+                body.longitude = location.coords.longitude;
+            }
+
+            const res = await fetch('/api/attendance/field-visit', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token},
+                body: JSON.stringify(body)
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                showAlert(data.message || 'Xəta baş verdi!', 'error');
+                return;
+            }
+
+            const successText = location.warning
+                ? data.message + ' ' + location.warning
+                : data.message;
+            showAlert(successText, 'success');
+        } catch (err) {
+            showAlert('Şəbəkə xətası. Yenidən cəhd edin.', 'error');
+        } finally {
+            button.disabled = false;
+            button.innerText = '📍 Giriş / Çıxışı Qeydə Al';
         }
-        showAlert(data.message, false);
     }
 </script>
 </body>

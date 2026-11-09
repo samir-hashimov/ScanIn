@@ -4,10 +4,13 @@ import com.scanin.dao.entity.Attendance;
 import com.scanin.dao.entity.User;
 import com.scanin.dao.repository.AttendanceRepository;
 import com.scanin.dao.repository.UserRepository;
+import com.scanin.dto.request.FieldVisitRequest;
 import com.scanin.dto.request.ScanActionRequest;
 import com.scanin.dto.response.AttendanceReportResponse;
 import com.scanin.dto.response.ScanResponse;
+import com.scanin.exception.ResourceNotFoundException;
 import com.scanin.mapper.AttendanceMapper;
+import com.scanin.util.ApprovalStatus;
 import com.scanin.util.ArrivalStatus;
 import com.scanin.util.DepartureStatus;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +23,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -239,6 +243,7 @@ public class AttendanceService {
                 .departureStatus(attendance.getDepartureStatus())
                 .build();
     }
+
     // ==================== HR HESABAT METODU ====================
     @Transactional(readOnly = true)
     public List<AttendanceReportResponse> getDailyReport(LocalDate date) {
@@ -254,22 +259,33 @@ public class AttendanceService {
         }
     }
 
-    // 1. KONTRAGENT YANINDAN GİRİŞ / ÇIXIŞ (IP Yoxlanışı YOXDUR!)
+    // Kənardan / səfərdən giriş-çıxış: ofis IP-si və HR təsdiqi tələb olunmur, dərhal qeydə alınır.
     @Transactional
-    public ScanResponse recordFieldVisit(String username, com.scanin.dto.request.FieldVisitRequest request) {
+    public ScanResponse recordFieldVisit(String username, FieldVisitRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new com.scanin.exception.ResourceNotFoundException("İstifadəçi tapılmadı!"));
+                .orElseThrow(() -> new ResourceNotFoundException("İstifadəçi tapılmadı!"));
 
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
+        FieldVisitRequest payload = request != null ? request : new FieldVisitRequest();
 
         Optional<Attendance> existingOpt = attendanceRepository.findByUserAndWorkDate(user, today);
 
-        // GİRİŞ (CHECK-IN):
         if (existingOpt.isEmpty()) {
-            long lateMins = java.time.Duration.between(user.getShiftStartTime(), now.toLocalTime()).toMinutes();
-            int lateMinutes = (int) Math.max(0, lateMins);
-            ArrivalStatus arrivalStatus = lateMinutes > 0 ? ArrivalStatus.LATE : ArrivalStatus.ON_TIME;
+            LocalTime shiftStart = user.getShiftStartTime() != null ? user.getShiftStartTime() : LocalTime.of(9, 0);
+            int lateMinutes = 0;
+            if (now.toLocalTime().isAfter(shiftStart)) {
+                lateMinutes = (int) Duration.between(shiftStart, now.toLocalTime()).toMinutes();
+            }
+
+            ArrivalStatus arrivalStatus;
+            if (lateMinutes == 0) {
+                arrivalStatus = ArrivalStatus.ON_TIME;
+            } else if (lateMinutes < 30) {
+                arrivalStatus = ArrivalStatus.LATE;
+            } else {
+                arrivalStatus = ArrivalStatus.CRITICAL_LATE;
+            }
 
             Attendance attendance = Attendance.builder()
                     .user(user)
@@ -277,68 +293,146 @@ public class AttendanceService {
                     .checkInTime(now)
                     .arrivalStatus(arrivalStatus)
                     .departureStatus(DepartureStatus.WORKING)
+                    .isFirstToArrive(false)
+                    .isLastToLeave(false)
                     .lateMinutes(lateMinutes)
-                    .lateReason(request.getNote())
-                    .fieldVisit(true)
-                    .counterpartyName(request.getCounterpartyName().trim())
-                    .approvalStatus(com.scanin.util.ApprovalStatus.PENDING)
+                    .overtimeMinutes(0)
+                    .totalWorkedMinutes(0)
+                    .approvalStatus(ApprovalStatus.NOT_REQUIRED)
                     .build();
-
+            applyExternalLocation(attendance, payload, false);
             attendanceRepository.save(attendance);
+            notificationService.sendCheckInNotification(attendance);
+
+            String place = placeLabel(attendance);
+            String gpsHint = attendance.getLatitude() != null
+                    ? " GPS koordinatları qeydə alındı."
+                    : " Lokasiya icazəsi olmadığı üçün koordinatsız, kənardan giriş kimi saxlanıldı.";
 
             return ScanResponse.builder()
                     .actionType("FIELD_CHECK_IN")
                     .employeeInfo(user.getFullName() + " (" + user.getPosition() + ")")
-                    .message("📍 Kontragent (" + request.getCounterpartyName() + ") yanında GİRİŞ qeydə alındı! Sorğunuz HR təsdiqinə göndərildi.")
+                    .message("📍 " + place + " GİRİŞ dərhal qeydə alındı." + gpsHint)
+                    .scanTime(now)
+                    .arrivalStatus(arrivalStatus)
+                    .departureStatus(DepartureStatus.WORKING)
                     .build();
         }
 
-        // ÇIXIŞ (CHECK-OUT):
         Attendance attendance = existingOpt.get();
-        if (attendance.getCheckOutTime() != null) {
+        if (attendance.getCheckOutTime() != null || attendance.getDepartureStatus() != DepartureStatus.WORKING) {
             throw new IllegalStateException("Siz bu gün üçün artıq çıxış etmisiniz!");
         }
 
+        LocalTime shiftEnd = user.getShiftEndTime() != null ? user.getShiftEndTime() : LocalTime.of(18, 0);
+        boolean early = now.toLocalTime().isBefore(shiftEnd);
         attendance.setCheckOutTime(now);
-        attendance.setFieldVisit(true);
-        attendance.setCounterpartyName(request.getCounterpartyName().trim());
-        if (attendance.getApprovalStatus() == com.scanin.util.ApprovalStatus.NOT_REQUIRED) {
-            attendance.setApprovalStatus(com.scanin.util.ApprovalStatus.PENDING);
+        attendance.setDepartureStatus(early ? DepartureStatus.EARLY_LEAVE : DepartureStatus.COMPLETED);
+        attendance.setApprovalStatus(ApprovalStatus.NOT_REQUIRED);
+
+        int workedMins = (int) Math.max(0, Duration.between(attendance.getCheckInTime(), now).toMinutes());
+        attendance.setTotalWorkedMinutes(workedMins);
+        if (now.toLocalTime().isAfter(shiftEnd)) {
+            attendance.setOvertimeMinutes((int) Duration.between(shiftEnd, now.toLocalTime()).toMinutes());
+        } else {
+            attendance.setOvertimeMinutes(0);
         }
-        if (request.getNote() != null && !request.getNote().isBlank()) {
-            attendance.setEarlyLeaveReason(request.getNote());
-        }
 
-        long workedMins = java.time.Duration.between(attendance.getCheckInTime(), now).toMinutes();
-        attendance.setTotalWorkedMinutes((int) Math.max(0, workedMins));
-
-        long overMins = java.time.Duration.between(user.getShiftEndTime(), now.toLocalTime()).toMinutes();
-        attendance.setOvertimeMinutes((int) Math.max(0, overMins));
-        attendance.setDepartureStatus(now.toLocalTime().isBefore(user.getShiftEndTime())
-                ? DepartureStatus.EARLY_LEAVE : DepartureStatus.COMPLETED);
-
+        applyExternalLocation(attendance, payload, true);
         attendanceRepository.save(attendance);
+        notificationService.sendCheckOutNotification(attendance);
+
+        String place = placeLabel(attendance);
+        String gpsHint = payload.getLatitude() != null && payload.getLongitude() != null
+                ? " Çıxış koordinatı da qeydə alındı."
+                : "";
 
         return ScanResponse.builder()
                 .actionType("FIELD_CHECK_OUT")
                 .employeeInfo(user.getFullName() + " (" + user.getPosition() + ")")
-                .message("✅ Kontragent (" + request.getCounterpartyName() + ") yanından ÇIXIŞ qeydə alındı! HR təsdiqi gözlənilir.")
+                .message("✅ " + place + " ÇIXIŞ dərhal qeydə alındı. Bu gün " + (workedMins / 60) + " saat " + (workedMins % 60) + " dəqiqə işlədiniz." + gpsHint)
+                .scanTime(now)
+                .arrivalStatus(attendance.getArrivalStatus())
+                .departureStatus(attendance.getDepartureStatus())
                 .build();
     }
 
-    // 2. HR TƏSDİQ VƏ YA RƏDD METODU:
+    private void applyExternalLocation(Attendance attendance, FieldVisitRequest request, boolean checkout) {
+        attendance.setFieldVisit(true);
+        attendance.setExternal(true);
+        attendance.setApprovalStatus(ApprovalStatus.NOT_REQUIRED);
+
+        if (request.getCounterpartyName() != null && !request.getCounterpartyName().isBlank()) {
+            attendance.setCounterpartyName(request.getCounterpartyName().trim());
+        }
+
+        String note = firstNonBlank(request.getLocationNote(), request.getNote());
+        if (note != null) {
+            attendance.setLocationNote(mergeNote(attendance.getLocationNote(), note));
+        }
+
+        if (request.getLatitude() == null || request.getLongitude() == null) {
+            return;
+        }
+
+        if (!checkout || attendance.getLatitude() == null || attendance.getLongitude() == null) {
+            attendance.setLatitude(request.getLatitude());
+            attendance.setLongitude(request.getLongitude());
+            return;
+        }
+
+        String checkoutGps = String.format(Locale.US, "Çıxış GPS: %.5f, %.5f", request.getLatitude(), request.getLongitude());
+        attendance.setLocationNote(mergeNote(attendance.getLocationNote(), checkoutGps));
+    }
+
+    private String placeLabel(Attendance attendance) {
+        if (attendance.getCounterpartyName() != null && !attendance.getCounterpartyName().isBlank()) {
+            return attendance.getCounterpartyName() + " yanında";
+        }
+        return "Kənardan";
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        if (primary != null && !primary.isBlank()) {
+            return primary.trim();
+        }
+        if (fallback != null && !fallback.isBlank()) {
+            return fallback.trim();
+        }
+        return null;
+    }
+
+    private String mergeNote(String existing, String addition) {
+        if (addition == null || addition.isBlank()) {
+            return existing;
+        }
+        String trimmed = addition.trim();
+        if (existing == null || existing.isBlank()) {
+            return limitNote(trimmed);
+        }
+        if (existing.contains(trimmed)) {
+            return existing;
+        }
+        return limitNote(existing + " | " + trimmed);
+    }
+
+    private String limitNote(String value) {
+        if (value == null || value.length() <= 500) {
+            return value;
+        }
+        return value.substring(0, 500);
+    }
+
+    // Köhnə HR təsdiq endpoint-i artıq rədd etmir: kənardan giriş birbaşa etibarlı sayılır.
     @Transactional
     public void verifyFieldVisit(Long attendanceId, boolean approved) {
         Attendance attendance = attendanceRepository.findById(attendanceId)
-                .orElseThrow(() -> new com.scanin.exception.ResourceNotFoundException("Qeyd tapılmadı!"));
+                .orElseThrow(() -> new ResourceNotFoundException("Qeyd tapılmadı!"));
 
-        if (approved) {
-            attendance.setApprovalStatus(com.scanin.util.ApprovalStatus.APPROVED);
-            attendance.setSystemNote("✅ HR tərəfindən kontragent səfəri təsdiqləndi.");
-        } else {
-            attendance.setApprovalStatus(com.scanin.util.ApprovalStatus.REJECTED);
-            attendance.setSystemNote("❌ HR tərəfindən RƏDD EDİLDİ (Kontragent səfəri təsdiqlənmədi!).");
-        }
+        attendance.setFieldVisit(true);
+        attendance.setExternal(true);
+        attendance.setApprovalStatus(ApprovalStatus.NOT_REQUIRED);
+        attendance.setSystemNote("Kənardan giriş birbaşa qeydə alınıb, HR təsdiqi tələb olunmur.");
         attendanceRepository.save(attendance);
     }
 }
